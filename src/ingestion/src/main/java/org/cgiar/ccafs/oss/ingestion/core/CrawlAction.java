@@ -1,11 +1,9 @@
-package org.cgiar.ccafs.oss.ingestion.connectors;
+package org.cgiar.ccafs.oss.ingestion.core;
 
-import org.cgiar.ccafs.oss.ingestion.core.CrawlItem;
-import org.cgiar.ccafs.oss.ingestion.core.IngestionException;
+import org.cgiar.ccafs.oss.ingestion.connectors.Connector;
 
 import java.util.*;
 import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.ForkJoinTask;
 import java.util.concurrent.RecursiveAction;
 
 /**

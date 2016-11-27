@@ -1,7 +1,7 @@
 package org.cgiar.ccafs.oss.ingestion.core.impl;
 
 import org.cgiar.ccafs.oss.ingestion.connectors.Connector;
-import org.cgiar.ccafs.oss.ingestion.connectors.CrawlAction;
+import org.cgiar.ccafs.oss.ingestion.core.CrawlAction;
 import org.cgiar.ccafs.oss.ingestion.core.CrawlController;
 import org.cgiar.ccafs.oss.ingestion.core.CrawlItem;
 
