@@ -1,0 +1,10 @@
+{
+  "connectors": [
+    {
+      "name": "cgspace",
+      "class": "com.cgiar.ccafs.oss.ingestion.cgspace.CGSpaceConnector",
+      "configuration": {
+      }
+    }
+  ]
+}

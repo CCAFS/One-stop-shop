@@ -6,12 +6,15 @@ import org.cgiar.ccafs.oss.ingestion.core.CrawlItem;
 import org.cgiar.ccafs.oss.ingestion.core.Document;
 
 import java.util.List;
+import java.util.Optional;
 
 /**
  * Created by equiros on 11/26/2016.
  */
 public interface Connector {
-  void initialize(ObjectNode configuration);
+  void setName(String name);
+  String getName();
+  void initialize(Optional<ObjectNode> configuration);
   CrawlItem getRootItem();
   void crawlRoot(CrawlItem rootItem, List<CrawlItem> discoveredItems);
   void scan(CrawlItem containerItem, List<CrawlItem> discoveredItems);

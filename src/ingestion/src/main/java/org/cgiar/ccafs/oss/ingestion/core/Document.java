@@ -4,6 +4,8 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
+import java.math.BigInteger;
+
 /**
  * ===========================================================
  * Created by Eduardo Quiros-Campos - ArkiTechTura Consulting
