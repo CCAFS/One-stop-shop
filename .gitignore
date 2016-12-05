@@ -2,3 +2,4 @@ src/ingestion/.idea/libraries/Maven__com_fasterxml_jackson_core_jackson_databind
 src/ingestion/.idea/libraries/
 src/ingestion/.idea/inspectionProfiles/
 *.class
+src/ingestion/target/
