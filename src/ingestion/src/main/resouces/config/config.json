@@ -4,7 +4,20 @@
       "name": "cgspace",
       "class": "com.cgiar.ccafs.oss.ingestion.cgspace.CGSpaceConnector",
       "configuration": {
-      }
+      },
+      "route": "main"
+    }
+  ],
+  "stages": [
+    {
+      "name": "extractText",
+      "class": "aaa"
+    }
+  ],
+  "pipelines": [
+    {
+      "name": "main",
+      "stages": ["extractText", "next", "next", "publish"]
     }
   ]
 }
