@@ -1,4 +1,4 @@
-package org.cgiar.ccafs.oss.ingestion.connectors;
+package org.cgiar.ccafs.oss.ingestion.core.connectors;
 
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.cgiar.ccafs.oss.ingestion.core.CrawlController;
@@ -18,5 +18,5 @@ public interface Connector {
   CrawlItem getRootItem();
   void crawlRoot(CrawlItem rootItem, List<CrawlItem> discoveredItems);
   void scan(CrawlItem containerItem, List<CrawlItem> discoveredItems);
-  Document fetch(CrawlItem leafItem, CrawlController crawlController);
+  Optional<Document> fetch(CrawlItem leafItem, CrawlController crawlController);
 }

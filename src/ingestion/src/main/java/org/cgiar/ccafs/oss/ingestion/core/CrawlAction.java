@@ -1,6 +1,8 @@
 package org.cgiar.ccafs.oss.ingestion.core;
 
-import org.cgiar.ccafs.oss.ingestion.connectors.Connector;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.cgiar.ccafs.oss.ingestion.core.connectors.Connector;
 
 import java.util.*;
 import java.util.concurrent.BlockingQueue;
@@ -15,23 +17,36 @@ public class CrawlAction extends RecursiveAction {
   private Connector connector;
   private CrawlItem item;
   private BlockingQueue<CrawlItem> fetchQueue;
+  private static final Logger logger = LogManager.getLogger(CrawlAction.class);
 
   public CrawlAction(Connector connector, CrawlItem item, BlockingQueue<CrawlItem> fetchQueue) {
     this.connector = connector;
     this.item = item;
     this.fetchQueue = fetchQueue;
+    logger.debug(String.format("CrawlAction created with item %s", item.toString()));
   }
 
   protected void compute() {
+    logger.debug(String.format("Compute started on item %s", item.toString()));
     if (item.getType() == CrawlItem.ITEM_TYPE.ROOT) {
       List<CrawlItem> discoveredItems = new LinkedList<CrawlItem>();
-      connector.crawlRoot(item, discoveredItems);
-      invokeAll(toActionList(discoveredItems));
+      try {
+        connector.crawlRoot(item, discoveredItems);
+        invokeAll(toActionList(discoveredItems));
+      }
+      catch (IngestionException e) {
+        logger.debug("Error crawling root", e);
+      }
     }
     else if (item.getType() == CrawlItem.ITEM_TYPE.CONTAINER) {
       List<CrawlItem> discoveredItems = new LinkedList<CrawlItem>();
-      connector.scan(item, discoveredItems);
-      invokeAll(toActionList(discoveredItems));
+      try {
+        connector.scan(item, discoveredItems);
+        invokeAll(toActionList(discoveredItems));
+      }
+      catch (IngestionException e) {
+        logger.debug(String.format("Error crawling item %s", item.getUri().toString()), e);
+      }
     }
     else {
       try {

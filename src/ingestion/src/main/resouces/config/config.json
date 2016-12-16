@@ -1,9 +1,13 @@
 {
+  "crawlThreads": 3,
+  "ingestionThreads": 5,
   "connectors": [
     {
       "name": "cgspace",
-      "class": "com.cgiar.ccafs.oss.ingestion.cgspace.CGSpaceConnector",
+      "class": "com.cgiar.ccafs.oss.ingestion.connectors.cgspace.CGSpaceConnector",
       "configuration": {
+        "baseURL": "https://cgspace.cgiar.org/rest",
+        "root": "/communities"
       },
       "route": "main"
     }

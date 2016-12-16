@@ -1,4 +1,4 @@
-package org.cgiar.ccafs.oss.ingestion.connectors;
+package org.cgiar.ccafs.oss.ingestion.core.connectors;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
@@ -80,6 +80,11 @@ public class ConnectorManager {
     }
   }
 
+  public boolean isCrawlDone(String connectorName) {
+    Optional<CrawlController> crawlController = Optional.of(connectorControllers.get(connectorName));
+    return !crawlController.isPresent() || crawlController.get().isQuiescent();
+  }
+
   private CrawlController getController(Connector connector) {
     Optional<CrawlController> crawlController = Optional.of(connectorControllers.get(connector.getName()));
     if (!crawlController.isPresent()) {
@@ -94,9 +99,9 @@ public class ConnectorManager {
     return controller;
   }
 
-  void stopCrawl(String connectorName) {
+  void stopCrawl(String connectorName, boolean force) {
     Connector connector = getConnector(connectorName);
     CrawlController controller = getController(connector);
-    controller.stopCrawl();
+    controller.stopCrawl(force);
   }
 }
