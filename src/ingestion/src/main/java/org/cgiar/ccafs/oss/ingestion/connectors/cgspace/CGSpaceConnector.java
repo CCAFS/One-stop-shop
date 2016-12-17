@@ -29,11 +29,12 @@ public class CGSpaceConnector implements Connector {
   private String connectorName;
   private String baseURL;
   private String root;
+  private String route;
   private static Logger logger = LogManager.getLogger(CGSpaceConnector.class);
 
   private final String ITEM_TYPE_KEY = "CGSPACE-ITEM-TYPE";
 
-  CGSpaceConnector() {
+  public CGSpaceConnector() {
     httpClient = HttpClients.createDefault();
   }
 
@@ -57,6 +58,7 @@ public class CGSpaceConnector implements Connector {
       throw new IngestionException("Can not initialize CGSpace Connector because there is no Base URL");
     }
     this.root = ConfigurationUtilities.safeString(configuration.get(), "root", "/communities");
+    this.route = ConfigurationUtilities.safeString(configuration.get(), "route", "default");
   }
 
   @Override
@@ -260,7 +262,7 @@ public class CGSpaceConnector implements Connector {
   }
 
   @Override
-  public Optional<Document> fetch(CrawlItem leafItem, CrawlController crawlController) {
+  public Optional<Document> fetch(CrawlItem leafItem) {
     try {
       URI uri = new URIBuilder(leafItem.getUri())
               .addParameter("expand", "metadata").build();
@@ -271,6 +273,11 @@ public class CGSpaceConnector implements Connector {
       logger.warn(String.format("Error encountered while fetching item %s", leafItem.toString()), e);
       return Optional.empty();
     }
+  }
+
+  @Override
+  public String getRoute() {
+    return null;
   }
 
   private Optional<Document> processItem(CrawlItem leafItem, JsonNode content) {

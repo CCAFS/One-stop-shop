@@ -35,6 +35,10 @@ public class CrawlController {
     return status == CrawlStatus.STOPPED || status == CrawlStatus.DONE || status == CrawlStatus.ERROR;
   }
 
+  public boolean isActive() {
+    return !isQuiescent();
+  }
+
   public ExecutorService startCrawl() {
     if (status == CrawlStatus.STOPPING) {
       logger.debug("Attempted START on CrawlController while in STOPPING state");
@@ -112,5 +116,9 @@ public class CrawlController {
 
   public ForkJoinPool getExecutorService() {
     return executorService;
+  }
+
+  public Connector getConnector() {
+    return connector;
   }
 }

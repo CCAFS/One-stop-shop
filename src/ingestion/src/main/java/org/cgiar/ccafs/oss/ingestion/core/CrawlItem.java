@@ -13,14 +13,14 @@ public class CrawlItem {
   private ITEM_TYPE type;
   private URI uri;
   private String name;
-  private Optional<CrawlItem> parent = Optional.empty();
+  private CrawlItem parent;
   private Map<String, Object> metadata;
 
   public CrawlItem(String name, ITEM_TYPE type, URI uri, CrawlItem parent) {
     this.name = name;
     this.type = type;
     this.uri = uri;
-    this.parent = Optional.of(parent);
+    this.parent = parent;
     this.metadata = new HashMap<>();
   }
 
@@ -40,7 +40,7 @@ public class CrawlItem {
     return name;
   }
 
-  public Optional<CrawlItem> getParent() {
+  public CrawlItem getParent() {
     return parent;
   }
 

@@ -5,19 +5,26 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.cgiar.ccafs.oss.ingestion.core.connectors.ConnectorManager;
 import org.cgiar.ccafs.oss.ingestion.util.ConfigurationUtilities;
 
 import java.io.*;
+import java.util.Optional;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 public class IngestionController {
   private static final Logger logger = LogManager.getLogger(IngestionController.class);
   private ConnectorManager connectorManager;
   private ExecutorService threadPool;
+  private ObjectNode configuration;
 
   private IngestionController(ObjectNode configuration) {
+    this.configuration = configuration;
+    initialize();
+  }
+
+  private void initialize() {
     connectorManager = new ConnectorManager(configuration);
     threadPool = Executors.newFixedThreadPool(ConfigurationUtilities.safeInteger(configuration, "ingestionThreads", 5));
   }
@@ -62,6 +69,7 @@ public class IngestionController {
   }
 
   public void stopCrawl(String connector) {
+    connectorManager.stopCrawl(connector, false);
   }
 
   private class IngestionRunnable implements Runnable {
@@ -73,8 +81,22 @@ public class IngestionController {
 
     @Override
     public void run() {
-      crawlController.join();
-
+      while (crawlController.isActive()) {
+        try {
+          CrawlItem item = crawlController.getFetchQueue().poll(1, TimeUnit.SECONDS);
+          if (item != null) {
+            Optional<Document> document = crawlController.getConnector().fetch(item);
+            document.ifPresent(doc -> submitDocument(doc, crawlController.getConnector().getRoute()));
+          }
+        }
+        catch (InterruptedException e) {
+          logger.warn("Interrupted while polling fetch queue", e);
+        }
+      }
     }
+  }
+
+  private void submitDocument(Document document, String route) {
+
   }
 }

@@ -18,5 +18,6 @@ public interface Connector {
   CrawlItem getRootItem();
   void crawlRoot(CrawlItem rootItem, List<CrawlItem> discoveredItems);
   void scan(CrawlItem containerItem, List<CrawlItem> discoveredItems);
-  Optional<Document> fetch(CrawlItem leafItem, CrawlController crawlController);
+  Optional<Document> fetch(CrawlItem leafItem);
+  public String getRoute();
 }

@@ -1,12 +1,12 @@
-package org.cgiar.ccafs.oss.ingestion.core.connectors;
+package org.cgiar.ccafs.oss.ingestion.core;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.cgiar.ccafs.oss.ingestion.core.CrawlController;
-import org.cgiar.ccafs.oss.ingestion.core.IngestionException;
+import org.cgiar.ccafs.oss.ingestion.core.connectors.Connector;
+import org.cgiar.ccafs.oss.ingestion.util.ConfigurationUtilities;
 
 import java.util.Iterator;
 import java.util.Map;
@@ -17,13 +17,16 @@ public class ConnectorManager {
   private static final Logger logger = LogManager.getLogger(ConnectorManager.class);
   private Map<String, Connector> connectorMap = new ConcurrentHashMap<>();
   private Map<String, CrawlController> connectorControllers = new ConcurrentHashMap<>();
+  private ObjectNode configuration;
+
   public ConnectorManager(ObjectNode configuration) {
-    logger.trace("Creating ConnectorManager");
-    loadConfiguration(configuration);
+    logger.debug("Creating ConnectorManager");
+    this.configuration = configuration;
+    initialize();
   }
 
-  private void loadConfiguration(ObjectNode configuration) {
-    logger.trace("Loading configuration from %s", configuration.toString());
+  private void initialize() {
+    logger.debug(String.format("Loading configuration from %s", configuration.toString()));
     Optional<ArrayNode> connectors = Optional.of((ArrayNode) configuration.get("connectors"));
     if (connectors.isPresent()) {
       for (Iterator<JsonNode> it = connectors.get().elements(); it.hasNext(); ) {
@@ -43,6 +46,7 @@ public class ConnectorManager {
       try {
         Connector connector;
         connectorMap.put(connectorName.get().asText(), connector = instantiateConnector(connectorClass.get().asText()));
+        connector.setName(connectorName.get().asText());
         connector.initialize(Optional.of((ObjectNode) elem.get("configuration")));
       } catch (Exception e) {
         logger.fatal("Error loading connector", e);
@@ -70,7 +74,10 @@ public class ConnectorManager {
 
   public CrawlController startCrawl(String connectorName) {
     Connector connector = getConnector(connectorName);
-    CrawlController crawlController = connectorControllers.putIfAbsent(connectorName, createCrawlController(connector));
+    CrawlController crawlController = connectorControllers.get(connectorName);
+    if (crawlController == null) {
+      connectorControllers.put(connectorName, crawlController = createCrawlController(connector));
+    }
     if (crawlController.isQuiescent()) {
       crawlController.startCrawl();
       return crawlController;
@@ -95,11 +102,11 @@ public class ConnectorManager {
 
   private CrawlController createCrawlController(Connector connector) {
     CrawlController controller = new CrawlController();
-    controller.initialize(connector, 3);
+    controller.initialize(connector, ConfigurationUtilities.safeInteger(this.configuration, "crawlThreads", 5));
     return controller;
   }
 
-  void stopCrawl(String connectorName, boolean force) {
+  public void stopCrawl(String connectorName, boolean force) {
     Connector connector = getConnector(connectorName);
     CrawlController controller = getController(connector);
     controller.stopCrawl(force);
