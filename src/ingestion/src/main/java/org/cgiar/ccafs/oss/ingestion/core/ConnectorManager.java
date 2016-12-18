@@ -15,7 +15,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class ConnectorManager {
   private static final Logger logger = LogManager.getLogger(ConnectorManager.class);
-  private Map<String, Connector> connectorMap = new ConcurrentHashMap<>();
+  private Map<String, Connector> connectors = new ConcurrentHashMap<>();
   private Map<String, CrawlController> connectorControllers = new ConcurrentHashMap<>();
   private ObjectNode configuration;
 
@@ -45,16 +45,17 @@ public class ConnectorManager {
     if (connectorName.isPresent() && connectorClass.isPresent()) {
       try {
         Connector connector;
-        connectorMap.put(connectorName.get().asText(), connector = instantiateConnector(connectorClass.get().asText()));
+        connectors.put(connectorName.get().asText(), connector = instantiateConnector(connectorClass.get().asText()));
         connector.setName(connectorName.get().asText());
-        connector.initialize(Optional.of((ObjectNode) elem.get("configuration")));
+        connector.initialize((ObjectNode) elem.get("configuration"));
       } catch (Exception e) {
-        logger.fatal("Error loading connector", e);
-        throw new IngestionException("Error loading connector", e);
+        String msg = "Error loading connector";
+        logger.fatal(msg, e);
+        throw new IngestionException(msg, e);
       }
     }
     else {
-      String message = "Unable to load connector from JSON: " + elem.toString();
+      String message = "Unable to load connector from configuration: " + elem.toString();
       logger.fatal(message);
       throw new IngestionException(message);
     }
@@ -64,22 +65,22 @@ public class ConnectorManager {
     return (Connector) ConnectorManager.class.getClassLoader().loadClass(clazz).newInstance();
   }
 
-  private Connector getConnector(String connectorName) {
-    Connector connector = connectorMap.get(connectorName);
+  public Connector getConnector(String connectorName) {
+    Connector connector = connectors.get(connectorName);
     if (connector == null) {
       throw new IngestionException(String.format("Connector %s is not configured", connectorName));
     }
     return connector;
   }
 
-  public CrawlController startCrawl(String connectorName) {
-    Connector connector = getConnector(connectorName);
-    CrawlController crawlController = connectorControllers.get(connectorName);
-    if (crawlController == null) {
-      connectorControllers.put(connectorName, crawlController = createCrawlController(connector));
-    }
-    if (crawlController.isQuiescent()) {
-      crawlController.startCrawl();
+  synchronized CrawlController startCrawl(String connectorName, int limit) {
+    if (canStartCrawl(connectorName)) {
+      Connector connector = getConnector(connectorName);
+      CrawlController crawlController = getController(connector);
+      if (crawlController == null) {
+        connectorControllers.put(connectorName, crawlController = createCrawlController(connector));
+      }
+      crawlController.startCrawl(limit);
       return crawlController;
     }
     else {
@@ -87,17 +88,19 @@ public class ConnectorManager {
     }
   }
 
-  public boolean isCrawlDone(String connectorName) {
-    Optional<CrawlController> crawlController = Optional.of(connectorControllers.get(connectorName));
-    return !crawlController.isPresent() || crawlController.get().isQuiescent();
+  public CrawlController getController(String connectorName) {
+    Connector connector = getConnector(connectorName);
+    return getController(connector);
+  }
+
+  synchronized boolean canStartCrawl(String connectorName) {
+    Connector connector = getConnector(connectorName);
+    CrawlController controller = getController(connector);
+    return controller == null || controller.isQuiescent();
   }
 
   private CrawlController getController(Connector connector) {
-    Optional<CrawlController> crawlController = Optional.of(connectorControllers.get(connector.getName()));
-    if (!crawlController.isPresent()) {
-      throw new IngestionException(String.format("Error locating controller for connector %s", connector.getName()));
-    }
-    return crawlController.get();
+    return connectorControllers.get(connector.getName());
   }
 
   private CrawlController createCrawlController(Connector connector) {
@@ -106,7 +109,7 @@ public class ConnectorManager {
     return controller;
   }
 
-  public void stopCrawl(String connectorName, boolean force) {
+  void stopCrawl(String connectorName, boolean force) {
     Connector connector = getConnector(connectorName);
     CrawlController controller = getController(connector);
     controller.stopCrawl(force);

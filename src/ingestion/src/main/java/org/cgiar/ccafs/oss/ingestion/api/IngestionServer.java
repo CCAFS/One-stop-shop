@@ -42,7 +42,17 @@ public class IngestionServer {
     get("/connector/:connector/start",
             (request, response) -> {
               try {
-                ingestionController.startCrawl(request.params(":connector"));
+                ingestionController.startCrawl(request.params(":connector"), -1);
+                return requestOK();
+              }
+              catch (IngestionException e) {
+                return requestError(e);
+              }
+            });
+    get("/connector/:connector/test",
+            (request, response) -> {
+              try {
+                ingestionController.startCrawl(request.params(":connector"), 20);
                 return requestOK();
               }
               catch (IngestionException e) {

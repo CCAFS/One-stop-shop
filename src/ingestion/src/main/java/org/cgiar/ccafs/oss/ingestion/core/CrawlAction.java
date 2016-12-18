@@ -18,8 +18,10 @@ public class CrawlAction extends RecursiveAction {
   private CrawlItem item;
   private BlockingQueue<CrawlItem> fetchQueue;
   private static final Logger logger = LogManager.getLogger(CrawlAction.class);
+  private CrawlContext context;
 
-  public CrawlAction(Connector connector, CrawlItem item, BlockingQueue<CrawlItem> fetchQueue) {
+  public CrawlAction(CrawlContext context, Connector connector, CrawlItem item, BlockingQueue<CrawlItem> fetchQueue) {
+    this.context = context;
     this.connector = connector;
     this.item = item;
     this.fetchQueue = fetchQueue;
@@ -27,6 +29,7 @@ public class CrawlAction extends RecursiveAction {
   }
 
   protected void compute() {
+    if (!context.shouldProceed()) return;
     logger.debug(String.format("Compute started on item %s", item.toString()));
     if (item.getType() == CrawlItem.ITEM_TYPE.ROOT) {
       List<CrawlItem> discoveredItems = new LinkedList<CrawlItem>();
@@ -41,6 +44,7 @@ public class CrawlAction extends RecursiveAction {
     else if (item.getType() == CrawlItem.ITEM_TYPE.CONTAINER) {
       List<CrawlItem> discoveredItems = new LinkedList<CrawlItem>();
       try {
+        context.newContainer();
         connector.scan(item, discoveredItems);
         invokeAll(toActionList(discoveredItems));
       }
@@ -50,6 +54,7 @@ public class CrawlAction extends RecursiveAction {
     }
     else {
       try {
+        context.newItem();
         fetchQueue.put(item);
       }
       catch (InterruptedException e) {
@@ -61,8 +66,12 @@ public class CrawlAction extends RecursiveAction {
   private List<CrawlAction> toActionList(List<CrawlItem> discoveredItems) {
     List<CrawlAction> actions = new ArrayList<CrawlAction>(discoveredItems.size());
     for (CrawlItem it : discoveredItems) {
-      actions.add(new CrawlAction(connector, it, fetchQueue));
+      actions.add(new CrawlAction(context, connector, it, fetchQueue));
     }
     return actions;
+  }
+
+  public CrawlContext getContext() {
+    return context;
   }
 }

@@ -10,12 +10,12 @@ import java.util.Optional;
 
 public class ConfigurationUtilities {
   public static int safeInteger(ObjectNode node, String key, int defaultValue) {
-    Optional<JsonNode> n = Optional.of(node.get(key));
+    Optional<JsonNode> n = Optional.ofNullable(node.get(key));
     return n.isPresent() && n.get().isInt() ? n.get().asInt() : defaultValue;
   }
 
   public static String safeString(ObjectNode node, String key, String defaultValue) {
-    Optional<JsonNode> n = Optional.of(node.get(key));
+    Optional<JsonNode> n = Optional.ofNullable(node.get(key));
     return n.isPresent() && n.get().isTextual() ? n.get().asText() : defaultValue;
   }
 

@@ -1,5 +1,6 @@
 package org.cgiar.ccafs.oss.ingestion.core;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -25,20 +26,20 @@ public class Document {
   }
 
   private void setupScopesArray() {
-    root.putObject("SCOPES_FIELD");
+    root.putObject(SCOPES_FIELD);
   }
 
   public ObjectNode addScope(String scopeName) {
     return ((ObjectNode) root.get(SCOPES_FIELD)).putObject(scopeName);
   }
 
-  public void setScope(String scopeName, ObjectNode scope) {
+  public void setScope(String scopeName, JsonNode scope) {
     ((ObjectNode) root.get(SCOPES_FIELD)).set(scopeName, scope);
   }
 
-  public Optional<ObjectNode> getScope(String scopeName) {
+  public Optional<JsonNode> getScope(String scopeName) {
     if (root.get(SCOPES_FIELD).has(scopeName)) {
-      return Optional.of((ObjectNode) root.get(SCOPES_FIELD).get(scopeName));
+      return Optional.of(root.get(SCOPES_FIELD).get(scopeName));
     }
     return Optional.empty();
   }

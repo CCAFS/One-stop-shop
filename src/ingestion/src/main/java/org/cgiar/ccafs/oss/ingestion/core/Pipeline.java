@@ -22,4 +22,16 @@ public class Pipeline {
     }
     return Optional.of(doc);
   }
+
+  public void onStart(String connector) {
+    for (Stage stage: stages) {
+      stage.onStart(connector);
+    }
+  }
+
+  public void onStop(String connector) {
+    for (Stage stage: stages) {
+      stage.onFinish(connector);
+    }
+  }
 }

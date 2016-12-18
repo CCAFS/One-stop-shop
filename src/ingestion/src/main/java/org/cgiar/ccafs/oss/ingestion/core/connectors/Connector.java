@@ -14,10 +14,10 @@ import java.util.Optional;
 public interface Connector {
   void setName(String name);
   String getName();
-  void initialize(Optional<ObjectNode> configuration);
+  void initialize(ObjectNode configuration);
   CrawlItem getRootItem();
   void crawlRoot(CrawlItem rootItem, List<CrawlItem> discoveredItems);
   void scan(CrawlItem containerItem, List<CrawlItem> discoveredItems);
   Optional<Document> fetch(CrawlItem leafItem);
-  public String getRoute();
+  String getRoute();
 }

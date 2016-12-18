@@ -39,7 +39,18 @@ public class CrawlController {
     return !isQuiescent();
   }
 
-  public ExecutorService startCrawl() {
+  public ExecutorService startCrawl(int limit) {
+    startChecks();
+    CrawlItem root = connector.getRootItem();
+    setStatus(CrawlStatus.RUNNING);
+    CrawlContext context = new CrawlContext(limit);
+    CrawlAction rootAction = new CrawlAction(context, connector, root, fetchQueue);
+    executorService.submit(rootAction);
+    startWatchdogThread(rootAction, this);
+    return executorService;
+  }
+
+  private void startChecks() {
     if (status == CrawlStatus.STOPPING) {
       logger.debug("Attempted START on CrawlController while in STOPPING state");
       throw new IngestionException(String.format("Crawl for connector %s is stopping", connector.getName()));
@@ -56,12 +67,6 @@ public class CrawlController {
       logger.debug("Attempted START on CrawlController while fetch queue is not empty");
       throw new IngestionException(String.format("There are still pending items to claim from connector %s from a previous crawl", connector.getName()));
     }
-    CrawlItem root = connector.getRootItem();
-    setStatus(CrawlStatus.RUNNING);
-    CrawlAction rootAction = new CrawlAction(connector, root, fetchQueue);
-    executorService.submit(rootAction);
-    startWatchdogThread(rootAction, this);
-    return executorService;
   }
 
   void join() {
@@ -80,12 +85,18 @@ public class CrawlController {
       try {
         rootAction.join();
         cc.setStatus(CrawlStatus.DONE);
+        printSummary(rootAction.getContext());
       }
       catch (Exception e) {
         cc.setStatus(CrawlStatus.ERROR);
       }
     });
     watchdog.start();
+  }
+
+  private void printSummary(CrawlContext context) {
+    logger.info(String.format("Crawl finished with %d errors. Discovered %d containers and %d items. ",
+            context.getErrorCount(), context.getContainerCount(), context.getItemCount()));
   }
 
   public void stopCrawl(boolean force){

@@ -49,16 +49,16 @@ public class CGSpaceConnector implements Connector {
   }
 
   @Override
-  public void initialize(Optional<ObjectNode> configuration) {
-    if (!configuration.isPresent()) {
+  public void initialize(ObjectNode configuration) {
+    if (configuration == null) {
       throw new IngestionException("Can not initialize CGSpace Connector because there is no configuration present");
     }
-    this.baseURL = ConfigurationUtilities.safeString(configuration.get(), "baseURL", null);
+    this.baseURL = ConfigurationUtilities.safeString(configuration, "baseURL", null);
     if (this.baseURL == null) {
       throw new IngestionException("Can not initialize CGSpace Connector because there is no Base URL");
     }
-    this.root = ConfigurationUtilities.safeString(configuration.get(), "root", "/communities");
-    this.route = ConfigurationUtilities.safeString(configuration.get(), "route", "default");
+    this.root = ConfigurationUtilities.safeString(configuration, "root", "/communities");
+    this.route = ConfigurationUtilities.safeString(configuration, "route", "default");
   }
 
   @Override
@@ -277,17 +277,17 @@ public class CGSpaceConnector implements Connector {
 
   @Override
   public String getRoute() {
-    return null;
+    return this.route;
   }
 
   private Optional<Document> processItem(CrawlItem leafItem, JsonNode content) {
     JsonNode metadata = content.get("metadata");
-    if (!metadata.isObject()) {
+    if (!metadata.isArray()) {
       logger.warn(String.format("Metadata not found on item %s", leafItem.toString()));
       return Optional.empty();
     }
     Document doc = new Document();
-    doc.setScope("CSSpaceMetadata", (ObjectNode) metadata);
+    doc.setScope("CGSpaceMetadata", metadata);
     return Optional.of(doc);
   }
 }

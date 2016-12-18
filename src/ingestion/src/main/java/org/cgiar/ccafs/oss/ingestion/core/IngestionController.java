@@ -5,17 +5,17 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.cgiar.ccafs.oss.ingestion.core.connectors.Connector;
 import org.cgiar.ccafs.oss.ingestion.util.ConfigurationUtilities;
 
 import java.io.*;
 import java.util.Optional;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 
 public class IngestionController {
   private static final Logger logger = LogManager.getLogger(IngestionController.class);
   private ConnectorManager connectorManager;
+  private PipelineManager pipelineManager;
   private ExecutorService threadPool;
   private ObjectNode configuration;
 
@@ -26,6 +26,8 @@ public class IngestionController {
 
   private void initialize() {
     connectorManager = new ConnectorManager(configuration);
+    StageManager stageManager = new StageManager(configuration);
+    pipelineManager = new PipelineManager(configuration, stageManager);
     threadPool = Executors.newFixedThreadPool(ConfigurationUtilities.safeInteger(configuration, "ingestionThreads", 5));
   }
 
@@ -63,9 +65,31 @@ public class IngestionController {
     return (ObjectNode) root;
   }
 
-  public void startCrawl(String connector) {
-    CrawlController crawlController = connectorManager.startCrawl(connector);
-    threadPool.submit(new IngestionRunnable(crawlController));
+  public void startCrawl(String connector, int limit) {
+    if (connectorManager.canStartCrawl(connector)) {
+      startPipeline(connector);
+      CrawlController crawlController = connectorManager.startCrawl(connector, limit);
+      Future f = threadPool.submit(new IngestionRunnable(crawlController));
+      try {
+        f.get();
+      }
+      catch (InterruptedException | ExecutionException e) {
+        logger.warn("Error during ingestion run", e);
+      }
+      stopPipeline(connector);
+    }
+  }
+
+  private void startPipeline(String connector) {
+    Connector conn = connectorManager.getConnector(connector);
+    Pipeline pipeline = pipelineManager.getPipeline(conn.getRoute());
+    pipeline.onStart(connector);
+  }
+
+  private void stopPipeline(String connector) {
+    Connector conn = connectorManager.getConnector(connector);
+    Pipeline pipeline = pipelineManager.getPipeline(conn.getRoute());
+    pipeline.onStop(connector);
   }
 
   public void stopCrawl(String connector) {
@@ -81,22 +105,29 @@ public class IngestionController {
 
     @Override
     public void run() {
-      while (crawlController.isActive()) {
+      while (crawlController.isActive() || !crawlController.getFetchQueue().isEmpty()) {
         try {
-          CrawlItem item = crawlController.getFetchQueue().poll(1, TimeUnit.SECONDS);
-          if (item != null) {
-            Optional<Document> document = crawlController.getConnector().fetch(item);
-            document.ifPresent(doc -> submitDocument(doc, crawlController.getConnector().getRoute()));
-          }
+          processQueue();
         }
         catch (InterruptedException e) {
           logger.warn("Interrupted while polling fetch queue", e);
         }
       }
     }
+
+    private void processQueue() throws InterruptedException {
+      CrawlItem item = crawlController.getFetchQueue().poll(1, TimeUnit.SECONDS);
+      if (item != null) {
+        Optional<Document> document = crawlController.getConnector().fetch(item);
+        document.ifPresent(doc -> submitDocument(doc, crawlController.getConnector().getRoute()));
+      }
+    }
   }
 
   private void submitDocument(Document document, String route) {
-
+    Pipeline pipeline = pipelineManager.getPipeline(route);
+    if (pipeline != null) {
+      pipeline.process(document);
+    }
   }
 }
