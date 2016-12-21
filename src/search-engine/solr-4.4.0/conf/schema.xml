@@ -62,8 +62,8 @@
     <field indexed="true" multiValued="true" name="contributor_funder" stored="true" type="text_general"/>
     <field indexed="true" multiValued="true" name="contributor_project" stored="true" type="text_general"/>
     <field indexed="true" multiValued="true" name="contributor_project_lead_institution" stored="true" type="text_general"/>
-    <field indexed="true" multiValued="false" name="production_date" stored="true" type="tdate"/>
-    <field indexed="true" multiValued="false" name="distribution_date" stored="true" type="tdate"/>
+    <field indexed="true" multiValued="false" name="production_date" stored="true" type="string"/>
+    <field indexed="true" multiValued="false" name="availability_date" stored="true" type="tdate"/>
     <field indexed="true" multiValued="true" name="type" stored="true" type="string"/>
     <field indexed="true" multiValued="true" name="format" stored="true" type="string"/>
     <field indexed="true" multiValued="true" name="identifier" stored="true" type="text_general"/>
@@ -78,7 +78,8 @@
     <field indexed="true" multiValued="true" name="rights" stored="true" type="text_general"/>
     <field indexed="true" multiValued="true" name="contact" stored="true" type="text_general"/>
     <!-- Common Metadata Fields, added for convenience -->
-    <field indexed="true" name="url" stored="true" type="text_general"/>
+    <field indexed="true" name="url" stored="true" type="string"/>
+    <field indexed="true" name="thumbnail_url" stored="true" type="string"/>
     <field indexed="true" multiValued="true" name="content_type" stored="true" type="string"/>
     <field indexed="true" name="last_modified" stored="true" type="date"/>
     <!-- Dynamic fields used for CGCore attributed fields -->
