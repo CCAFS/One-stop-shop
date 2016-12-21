@@ -28,7 +28,7 @@ public class IngestionController {
     connectorManager = new ConnectorManager(configuration);
     StageManager stageManager = new StageManager(configuration);
     pipelineManager = new PipelineManager(configuration, stageManager);
-    threadPool = Executors.newFixedThreadPool(ConfigurationUtilities.safeInteger(configuration, "ingestionThreads", 5));
+    threadPool = Executors.newFixedThreadPool(ConfigurationUtilities.safeInteger(configuration, "ingestionThreads", 5) + 2);
   }
 
   public static IngestionController fromDirectory(String configurationDirectory) {
@@ -67,16 +67,21 @@ public class IngestionController {
 
   public void startCrawl(String connector, int limit) {
     if (connectorManager.canStartCrawl(connector)) {
-      startPipeline(connector);
-      CrawlController crawlController = connectorManager.startCrawl(connector, limit);
-      Future f = threadPool.submit(new IngestionRunnable(crawlController));
-      try {
-        f.get();
-      }
-      catch (InterruptedException | ExecutionException e) {
-        logger.warn("Error during ingestion run", e);
-      }
-      stopPipeline(connector);
+      threadPool.submit(() -> {
+        startPipeline(connector);
+        CrawlController crawlController = connectorManager.startCrawl(connector, limit);
+        Future f = threadPool.submit(new IngestionRunnable(crawlController));
+        try {
+          f.get();
+        }
+        catch (InterruptedException | ExecutionException e) {
+          logger.warn("Error during ingestion run", e);
+        }
+        stopPipeline(connector);
+      });
+    }
+    else {
+      throw new IngestionException(String.format("Crawl on connector %s can't start because a previous crawl is running!", connector));
     }
   }
 

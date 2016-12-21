@@ -43,9 +43,11 @@ public class IngestionServer {
             (request, response) -> {
               try {
                 ingestionController.startCrawl(request.params(":connector"), -1);
+                response.type("application/json");
                 return requestOK();
               }
               catch (IngestionException e) {
+                response.type("application/json");
                 return requestError(e);
               }
             });
@@ -53,9 +55,11 @@ public class IngestionServer {
             (request, response) -> {
               try {
                 ingestionController.startCrawl(request.params(":connector"), 20);
+                response.type("application/json");
                 return requestOK();
               }
               catch (IngestionException e) {
+                response.type("application/json");
                 return requestError(e);
               }
             });
@@ -63,9 +67,11 @@ public class IngestionServer {
             (request, response) -> {
               try {
                 ingestionController.stopCrawl(request.params(":connector"));
+                response.type("application/json");
                 return requestOK();
               }
               catch (IngestionException e) {
+                response.type("application/json");
                 return requestError(e);
               }
             });
