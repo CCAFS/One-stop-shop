@@ -3,6 +3,7 @@ package org.cgiar.ccafs.oss.ingestion.connectors.cgspace;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.apache.http.HttpHeaders;
 import org.apache.http.HttpResponse;
@@ -12,7 +13,6 @@ import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.cgiar.ccafs.oss.ingestion.core.CrawlController;
 import org.cgiar.ccafs.oss.ingestion.core.CrawlItem;
 import org.cgiar.ccafs.oss.ingestion.core.Document;
 import org.cgiar.ccafs.oss.ingestion.core.IngestionException;
@@ -31,6 +31,7 @@ public class CGSpaceConnector implements Connector {
   private String root;
   private String route;
   private static Logger logger = LogManager.getLogger(CGSpaceConnector.class);
+  private static JsonNodeFactory jsonNodeFactory = new JsonNodeFactory(false);
 
   private final String ITEM_TYPE_KEY = "CGSPACE-ITEM-TYPE";
 
@@ -79,10 +80,14 @@ public class CGSpaceConnector implements Connector {
     ObjectNode head = (ObjectNode) (content.isArray() ? content.get(0) : content);
     String type = head.get("type").asText();
     switch (type) {
-      case "community": return CGSpaceItemType.COMMUNITY;
-      case "collection": return CGSpaceItemType.COLLECTION;
-      case "item": return CGSpaceItemType.ITEM;
-      default: return CGSpaceItemType.BITSTREAM;
+      case "community":
+        return CGSpaceItemType.COMMUNITY;
+      case "collection":
+        return CGSpaceItemType.COLLECTION;
+      case "item":
+        return CGSpaceItemType.ITEM;
+      default:
+        return CGSpaceItemType.BITSTREAM;
     }
   }
 
@@ -115,7 +120,7 @@ public class CGSpaceConnector implements Connector {
         case COMMUNITY:
           if (content.isArray()) {
             ArrayNode communities = (ArrayNode) content;
-            for (Iterator<JsonNode> it = communities.elements(); it.hasNext();) {
+            for (Iterator<JsonNode> it = communities.elements(); it.hasNext(); ) {
               JsonNode communityNode = it.next();
               CrawlItem communityItem = createCommunityItem(rootItem, communityNode);
               if (communityItem != null) {
@@ -264,8 +269,7 @@ public class CGSpaceConnector implements Connector {
   @Override
   public Optional<Document> fetch(CrawlItem leafItem) {
     try {
-      URI uri = new URIBuilder(leafItem.getUri())
-              .addParameter("expand", "metadata").build();
+      URI uri = new URIBuilder(leafItem.getUri()).addParameter("expand", "metadata").build();
       JsonNode content = readContent(uri);
       return processItem(leafItem, content);
     }
@@ -281,13 +285,136 @@ public class CGSpaceConnector implements Connector {
   }
 
   private Optional<Document> processItem(CrawlItem leafItem, JsonNode content) {
-    JsonNode metadata = content.get("metadata");
-    if (!metadata.isArray()) {
+    JsonNode cgspaceMetadata = content.get("metadata");
+    if (!cgspaceMetadata.isArray()) {
       logger.warn(String.format("Metadata not found on item %s", leafItem.toString()));
       return Optional.empty();
     }
     Document doc = new Document();
-    doc.setScope("CGSpaceMetadata", metadata);
+    ObjectNode metadata = doc.addScope("Metadata");
+    metadata.put("id", content.get("id").asText());
+    metadata.put("name", content.get("name").asText());
+    String link = content.get("link").asText();
+    metadata.put("link", link);
+    metadata.put("lastModified", content.get("lastModified").asText());
+    String thumbnailLink = getThumbnailLink(baseURL + link);
+    if (thumbnailLink != null) {
+      metadata.put("thumbnailLink", thumbnailLink);
+    }
+    doc.setScope("CGSpace", cgspaceMetadata);
+    addSolrScope(doc, cgspaceMetadata, "Solr");
     return Optional.of(doc);
+  }
+
+  private String getThumbnailLink(String itemLink) {
+    try {
+      URI uri = new URIBuilder(itemLink + "/bitstreams").build();
+      JsonNode content = readContent(uri);
+      if (content.isArray()) {
+        ArrayNode bundles = (ArrayNode) content;
+        for (Iterator<JsonNode> it = bundles.elements(); it.hasNext(); ) {
+          ObjectNode bundle = (ObjectNode) it.next();
+          String bundleName = bundle.get("bundleName").asText();
+          if (bundleName != null && "thumbnail".equalsIgnoreCase(bundleName)) {
+            String link = bundle.get("retrieveLink").asText();
+            if (link != null) {
+              return "/rest" + link;
+            }
+          }
+        }
+      }
+      else {
+        logger.warn(String.format("Malformed bitstream information: %s", content.toString()));
+      }
+      return null;
+    }
+    catch (URISyntaxException | IOException e) {
+      logger.warn("Error retrieving thumbnail link", e);
+      return null;
+    }
+  }
+
+  private ObjectNode createSolrFieldNode(String fieldName, String fieldValue) {
+    ObjectNode node = jsonNodeFactory.objectNode();
+    node.put("fieldName", fieldName);
+    node.put("fieldValue", fieldValue);
+    return node;
+  }
+
+  private void addSolrScope(Document doc, JsonNode metadata, String scopeName) {
+    ArrayNode solrData = jsonNodeFactory.arrayNode();
+    for (Iterator<JsonNode> it = metadata.elements(); it.hasNext(); ) {
+      ObjectNode item = (ObjectNode) it.next();
+      String key = item.get("key").asText();
+      String value = item.get("value").asText();
+      String solrFieldName = getSolrFieldName(key);
+      if (solrFieldName != null) {
+        solrData.add(createSolrFieldNode(solrFieldName, value));
+      }
+    }
+    ObjectNode documentMetadata = (ObjectNode) doc.getScope("Metadata").get();
+    solrData.add(createSolrFieldNode("id", documentMetadata.get("id").textValue()));
+    solrData.add(createSolrFieldNode("document_type", "Publication"));
+    solrData.add(createSolrFieldNode("url",
+            baseURL + documentMetadata.get("link").textValue()));
+    solrData.add(createSolrFieldNode("thumbnail_url",
+            baseURL + documentMetadata.get("thumbnailLink").textValue()));
+    doc.setScope(scopeName, solrData);
+  }
+
+  private String getSolrFieldName(String key) {
+    String k = key.toLowerCase();
+    if (k.equals("dc.contributor.author")) {
+      return "creator";
+    }
+    else if (k.equals("dc.identifier.citation") || k.equals("dc.identifier.uri") || k.equals("cg.identifier.doi") || k.equals("cg.identifier.url")) {
+      return "identifier";
+    }
+    else if (k.equals("dc.description.abstract")) {
+      return "description";
+    }
+    else if (k.equals("dc.language.iso")) {
+      return "language";
+    }
+    else if (k.equals("dc.title")) {
+      return "title";
+    }
+    else if (k.equals("dc.type")) {
+      return "type";
+    }
+    else if (k.startsWith("dc.subject") || k.startsWith("cg.subject")) {
+      return "subject";
+    }
+    else if (k.startsWith("cg.contributor") || k.equals("dc.description.sponsorship") || k.startsWith("cg.identifier.")) {
+      return "contributor_person";
+    }
+    else if (k.equals("dc.publisher")) {
+      return "publisher";
+    }
+    else if (k.equals("dc.source")) {
+      return "source";
+    }
+    else if (k.equals("dc.relation")) {
+      return "relation";
+    }
+    else if (k.equals("cg.coverage.region")) {
+      return "coverage_region";
+    }
+    else if (k.equals("cg.coverage.country")) {
+      return "coverage_country";
+    }
+    else if (k.equals("cg.coverage.subregion")) {
+      return "coverage_admin_unit";
+    }
+    else if (k.equals("dc.date.issued")) {
+      return "production_date";
+    }
+    else if (k.equals("dc.date.available")) {
+      return "distribution_date";
+    }
+    else {
+      logger.warn(String.format("Element %s is not mapped", key));
+      return null;
+    }
   }
 }

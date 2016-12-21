@@ -44,7 +44,7 @@ public class StageManager {
       try {
         Stage stage;
         stages.put(stageName.get().asText(), stage = instantiateStage(stageClass.get().asText()));
-        stage.initialize(elem);
+        stage.initialize((ObjectNode) elem.get("configuration"));
       }
       catch (ClassNotFoundException | IllegalAccessException | InstantiationException e) {
         String msg = "Error loading stage";
