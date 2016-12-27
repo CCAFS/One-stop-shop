@@ -30,7 +30,7 @@ public class CrawlAction extends RecursiveAction {
 
   protected void compute() {
     if (!context.shouldProceed()) return;
-    logger.debug(String.format("Compute started on item %s", item.toString()));
+    logger.info(String.format("Compute started on item %s", item.toString()));
     if (item.getType() == CrawlItem.ITEM_TYPE.ROOT) {
       List<CrawlItem> discoveredItems = new LinkedList<CrawlItem>();
       try {
@@ -53,13 +53,8 @@ public class CrawlAction extends RecursiveAction {
       }
     }
     else {
-      try {
-        context.newItem();
-        fetchQueue.put(item);
-      }
-      catch (InterruptedException e) {
-        throw new IngestionException(e);
-      }
+      context.newItem();
+      fetchQueue.add(item);
     }
   }
 

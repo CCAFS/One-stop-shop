@@ -269,7 +269,7 @@ public class CGSpaceConnector implements Connector {
   @Override
   public Optional<Document> fetch(CrawlItem leafItem) {
     try {
-      URI uri = new URIBuilder(leafItem.getUri()).addParameter("expand", "metadata").build();
+      URI uri = new URIBuilder(leafItem.getUri()).addParameter("expand", "metadata,bitstreams,parentCommunityList").build();
       JsonNode content = readContent(uri);
       return processItem(leafItem, content);
     }
@@ -285,8 +285,8 @@ public class CGSpaceConnector implements Connector {
   }
 
   private Optional<Document> processItem(CrawlItem leafItem, JsonNode content) {
-    JsonNode cgspaceMetadata = content.get("metadata");
-    if (!cgspaceMetadata.isArray()) {
+    JsonNode metadataNode = content.get("metadata");
+    if (!metadataNode.isArray()) {
       logger.warn(String.format("Metadata not found on item %s", leafItem.toString()));
       return Optional.empty();
     }
@@ -297,21 +297,20 @@ public class CGSpaceConnector implements Connector {
     String link = content.get("link").asText();
     metadata.put("link", link);
     metadata.put("lastModified", content.get("lastModified").asText());
-    String thumbnailLink = getThumbnailLink(baseURL + link);
+    metadata.set("parentCommunityList", content.path("parentCommunityList"));
+    String thumbnailLink = getThumbnailLink(content);
     if (thumbnailLink != null) {
       metadata.put("thumbnailLink", thumbnailLink);
     }
-    doc.setScope("CGSpace", cgspaceMetadata);
-    addSolrScope(doc, cgspaceMetadata, "Solr");
+    doc.setScope("CGSpace", metadataNode);
+    addSolrScope(doc, metadataNode, "Solr");
     return Optional.of(doc);
   }
 
-  private String getThumbnailLink(String itemLink) {
-    try {
-      URI uri = new URIBuilder(itemLink + "/bitstreams").build();
-      JsonNode content = readContent(uri);
-      if (content.isArray()) {
-        ArrayNode bundles = (ArrayNode) content;
+  private String getThumbnailLink(JsonNode contentNode) {
+      JsonNode bitstreamsNode = contentNode.get("bitstreams");
+      if (bitstreamsNode.isArray()) {
+        ArrayNode bundles = (ArrayNode) bitstreamsNode;
         for (Iterator<JsonNode> it = bundles.elements(); it.hasNext(); ) {
           ObjectNode bundle = (ObjectNode) it.next();
           String bundleName = bundle.get("bundleName").asText();
@@ -324,14 +323,9 @@ public class CGSpaceConnector implements Connector {
         }
       }
       else {
-        logger.warn(String.format("Malformed bitstream information: %s", content.toString()));
+        logger.warn(String.format("Malformed bitstream information: %s", bitstreamsNode.toString()));
       }
       return null;
-    }
-    catch (URISyntaxException | IOException e) {
-      logger.warn("Error retrieving thumbnail link", e);
-      return null;
-    }
   }
 
   private ObjectNode createSolrFieldNode(String fieldName, String fieldValue) {
@@ -357,8 +351,10 @@ public class CGSpaceConnector implements Connector {
     solrData.add(createSolrFieldNode("document_type", "Publication"));
     solrData.add(createSolrFieldNode("url",
             baseURL + documentMetadata.get("link").textValue()));
-    solrData.add(createSolrFieldNode("thumbnail_url",
-            baseURL + documentMetadata.get("thumbnailLink").textValue()));
+    if (documentMetadata.has("thumbnailLink")) {
+      solrData.add(createSolrFieldNode("thumbnail_url",
+              baseURL + documentMetadata.get("thumbnailLink").textValue()));
+    }
     doc.setScope(scopeName, solrData);
   }
 
@@ -410,10 +406,10 @@ public class CGSpaceConnector implements Connector {
       return "production_date";
     }
     else if (k.equals("dc.date.available")) {
-      return "distribution_date";
+      return "availability_date";
     }
     else {
-      logger.warn(String.format("Element %s is not mapped", key));
+      logger.debug(String.format("Element %s is not mapped", key));
       return null;
     }
   }

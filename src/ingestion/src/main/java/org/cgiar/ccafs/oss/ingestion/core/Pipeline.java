@@ -19,6 +19,9 @@ public class Pipeline {
     for (Stage stage : stages) {
       Optional<Document> d = stage.process(doc);
       doc = d.orElse(null);
+      if (doc == null) {
+        return Optional.empty();
+      }
     }
     return Optional.of(doc);
   }

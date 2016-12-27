@@ -16,8 +16,10 @@ public class IngestionController {
   private static final Logger logger = LogManager.getLogger(IngestionController.class);
   private ConnectorManager connectorManager;
   private PipelineManager pipelineManager;
-  private ExecutorService threadPool;
+  private ExecutorService ingestionThreadPool;
+  private ExecutorService crawlThreadPool;
   private ObjectNode configuration;
+  private int ingestionThreads;
 
   private IngestionController(ObjectNode configuration) {
     this.configuration = configuration;
@@ -28,7 +30,8 @@ public class IngestionController {
     connectorManager = new ConnectorManager(configuration);
     StageManager stageManager = new StageManager(configuration);
     pipelineManager = new PipelineManager(configuration, stageManager);
-    threadPool = Executors.newFixedThreadPool(ConfigurationUtilities.safeInteger(configuration, "ingestionThreads", 5) + 2);
+    ingestionThreads = ConfigurationUtilities.safeInteger(configuration, "ingestionThreads", 5);
+    crawlThreadPool = Executors.newSingleThreadExecutor();
   }
 
   public static IngestionController fromDirectory(String configurationDirectory) {
@@ -67,15 +70,19 @@ public class IngestionController {
 
   public void startCrawl(String connector, int limit) {
     if (connectorManager.canStartCrawl(connector)) {
-      threadPool.submit(() -> {
+      crawlThreadPool.submit(() -> {
+        ingestionThreadPool = Executors.newFixedThreadPool(ingestionThreads);
         startPipeline(connector);
         CrawlController crawlController = connectorManager.startCrawl(connector, limit);
-        Future f = threadPool.submit(new IngestionRunnable(crawlController));
-        try {
-          f.get();
+        for (int t = 0; t < ingestionThreads; t++) {
+          ingestionThreadPool.submit(new IngestionRunnable(crawlController));
         }
-        catch (InterruptedException | ExecutionException e) {
-          logger.warn("Error during ingestion run", e);
+        ingestionThreadPool.shutdown();
+        try {
+          ingestionThreadPool.awaitTermination(24, TimeUnit.HOURS);
+        }
+        catch (InterruptedException e) {
+          logger.warn("Ingestion thread pool interrupted", e);
         }
         stopPipeline(connector);
       });
