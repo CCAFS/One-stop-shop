@@ -30,8 +30,8 @@ public class CrawlAction extends RecursiveAction {
 
   protected void compute() {
     if (!context.shouldProceed()) return;
-    logger.info(String.format("Compute started on item %s", item.toString()));
     if (item.getType() == CrawlItem.ITEM_TYPE.ROOT) {
+      logger.info(String.format("Processing root item: %s", item.toString()));
       List<CrawlItem> discoveredItems = new LinkedList<CrawlItem>();
       try {
         connector.crawlRoot(item, discoveredItems);
@@ -42,6 +42,7 @@ public class CrawlAction extends RecursiveAction {
       }
     }
     else if (item.getType() == CrawlItem.ITEM_TYPE.CONTAINER) {
+      logger.info(String.format("Processing container: %s", item.toString()));
       List<CrawlItem> discoveredItems = new LinkedList<CrawlItem>();
       try {
         context.newContainer();
@@ -53,6 +54,7 @@ public class CrawlAction extends RecursiveAction {
       }
     }
     else {
+      logger.info(String.format("Adding item %s to fetch queue", item.toString()));
       context.newItem();
       fetchQueue.add(item);
     }

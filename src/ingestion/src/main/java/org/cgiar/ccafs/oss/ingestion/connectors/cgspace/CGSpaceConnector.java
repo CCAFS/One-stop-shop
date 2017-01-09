@@ -22,6 +22,8 @@ import org.cgiar.ccafs.oss.ingestion.util.ConfigurationUtilities;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.*;
 
 public class CGSpaceConnector implements Connector {
@@ -34,6 +36,7 @@ public class CGSpaceConnector implements Connector {
   private static JsonNodeFactory jsonNodeFactory = new JsonNodeFactory(false);
 
   private final String ITEM_TYPE_KEY = "CGSPACE-ITEM-TYPE";
+  private final String ITEM_ID_KEY="CGSPACE-ITEM-ID";
 
   public CGSpaceConnector() {
     httpClient = HttpClients.createDefault();
@@ -258,6 +261,7 @@ public class CGSpaceConnector implements Connector {
       CrawlItem crawlItem = new CrawlItem(ConfigurationUtilities.safeString(collection, "name", "<<Collection Name Not Present>>"),
               CrawlItem.ITEM_TYPE.CONTAINER, ConfigurationUtilities.buildURI(baseURL + collection.get("link").asText()), parent);
       crawlItem.addMetadata(ITEM_TYPE_KEY, CGSpaceItemType.COLLECTION);
+      crawlItem.addMetadata(ITEM_ID_KEY, collection.get("id").intValue());
       return crawlItem;
     }
     else {
@@ -270,6 +274,7 @@ public class CGSpaceConnector implements Connector {
   public Optional<Document> fetch(CrawlItem leafItem) {
     try {
       URI uri = new URIBuilder(leafItem.getUri()).addParameter("expand", "metadata,bitstreams,parentCommunityList").build();
+      logger.info(String.format("Fetching item %s", uri.toString()));
       JsonNode content = readContent(uri);
       return processItem(leafItem, content);
     }
@@ -291,8 +296,9 @@ public class CGSpaceConnector implements Connector {
       return Optional.empty();
     }
     Document doc = new Document();
+
     ObjectNode metadata = doc.addScope("Metadata");
-    metadata.put("id", content.get("id").asText());
+    metadata.put("id", generateHash(content.get("link").asText()));
     metadata.put("name", content.get("name").asText());
     String link = content.get("link").asText();
     metadata.put("link", link);
@@ -303,8 +309,29 @@ public class CGSpaceConnector implements Connector {
       metadata.put("thumbnailLink", thumbnailLink);
     }
     doc.setScope("CGSpace", metadataNode);
-    addSolrScope(doc, metadataNode, "Solr");
+    addSolrScope(doc, metadataNode, getDocumentType(leafItem));
     return Optional.of(doc);
+  }
+
+  private String getDocumentType(CrawlItem item) {
+    // Parent item should correspond to the collection
+    CrawlItem collectionItem = item.getParent();
+    if (collectionItem != null && collectionItem.getMetadata(ITEM_TYPE_KEY).equals(CGSpaceItemType.COLLECTION)) {
+      return collectionItem.getName();
+    }
+    return "Publication";
+  }
+
+  private String generateHash(String str) {
+    try {
+      MessageDigest md = MessageDigest.getInstance("MD5");
+      md.update(str.getBytes());
+      return new String(md.digest());
+    }
+    catch (NoSuchAlgorithmException e) {
+      logger.warn("Error generating MD5 hash value", e);
+      return str;
+    }
   }
 
   private String getThumbnailLink(JsonNode contentNode) {
@@ -335,7 +362,7 @@ public class CGSpaceConnector implements Connector {
     return node;
   }
 
-  private void addSolrScope(Document doc, JsonNode metadata, String scopeName) {
+  private void addSolrScope(Document doc, JsonNode metadata, String documentType) {
     ArrayNode solrData = jsonNodeFactory.arrayNode();
     for (Iterator<JsonNode> it = metadata.elements(); it.hasNext(); ) {
       ObjectNode item = (ObjectNode) it.next();
@@ -348,14 +375,14 @@ public class CGSpaceConnector implements Connector {
     }
     ObjectNode documentMetadata = (ObjectNode) doc.getScope("Metadata").get();
     solrData.add(createSolrFieldNode("id", documentMetadata.get("id").textValue()));
-    solrData.add(createSolrFieldNode("document_type", "Publication"));
+    solrData.add(createSolrFieldNode("document_type", documentType));
     solrData.add(createSolrFieldNode("url",
             baseURL + documentMetadata.get("link").textValue()));
     if (documentMetadata.has("thumbnailLink")) {
       solrData.add(createSolrFieldNode("thumbnail_url",
               baseURL + documentMetadata.get("thumbnailLink").textValue()));
     }
-    doc.setScope(scopeName, solrData);
+    doc.setScope("Solr", solrData);
   }
 
   private String getSolrFieldName(String key) {

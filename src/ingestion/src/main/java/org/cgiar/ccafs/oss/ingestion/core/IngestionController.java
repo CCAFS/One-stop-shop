@@ -34,10 +34,9 @@ public class IngestionController {
     crawlThreadPool = Executors.newSingleThreadExecutor();
   }
 
-  public static IngestionController fromDirectory(String configurationDirectory) {
-    File configFile = new File(configurationDirectory, "config.json");
+  public static IngestionController fromFile(File configFile) {
     if (!configFile.exists()) {
-      String message = String.format("Can not load config.json file from directory %s", configurationDirectory);
+      String message = String.format("File '%s' to configure the ingestion process does not exist", configFile.getAbsolutePath());
       logger.fatal(message);
       throw new IngestionException(message);
     }
@@ -47,6 +46,11 @@ public class IngestionController {
     catch (IOException e) {
       throw new IngestionException("Error creating ingestion controller", e);
     }
+  }
+
+  public static IngestionController fromDirectory(String configurationDirectory) {
+    File configFile = new File(configurationDirectory, "config.json");
+    return fromFile(configFile);
   }
 
   public static IngestionController fromStream(InputStream inputStream) {
@@ -66,6 +70,10 @@ public class IngestionController {
       throw new IngestionException("Configuration file is malformed. Root object must be JSON Object");
     }
     return (ObjectNode) root;
+  }
+
+  public ObjectNode ingestionStatus(String connector) {
+    return connectorManager.crawlStatus(connector);
   }
 
   public void startCrawl(String connector, int limit) {

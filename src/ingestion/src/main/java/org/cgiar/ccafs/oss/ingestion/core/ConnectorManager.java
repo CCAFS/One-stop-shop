@@ -2,6 +2,7 @@ package org.cgiar.ccafs.oss.ingestion.core;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -17,6 +18,7 @@ public class ConnectorManager {
   private static final Logger logger = LogManager.getLogger(ConnectorManager.class);
   private Map<String, Connector> connectors = new ConcurrentHashMap<>();
   private Map<String, CrawlController> connectorControllers = new ConcurrentHashMap<>();
+  private static JsonNodeFactory jsonNodeFactory = new JsonNodeFactory(false);
   private ObjectNode configuration;
 
   public ConnectorManager(ObjectNode configuration) {
@@ -73,6 +75,23 @@ public class ConnectorManager {
     return connector;
   }
 
+  synchronized ObjectNode crawlStatus(String connectorName) {
+    ObjectNode status = jsonNodeFactory.objectNode();
+    Connector connector = getConnector(connectorName);
+    status.put("connector", connectorName);
+    CrawlController crawlController = getController(connector);
+    if (crawlController == null) {
+      status.put("message", String.format("Connector %s is currently not running a crawl", connectorName));
+    }
+    CrawlContext crawlContext = crawlController.getCrawlContext();
+    status.put("crawlStatus", crawlController.getStatus().toString());
+    status.put("containerCount", crawlContext.getContainerCount());
+    status.put("itemCount", crawlContext.getItemCount());
+    status.put("errorCount", crawlContext.getErrorCount());
+    status.put("fetchQueueLength", crawlController.getFetchQueue().size());
+    return status;
+  }
+
   synchronized CrawlController startCrawl(String connectorName, int limit) {
     if (canStartCrawl(connectorName)) {
       Connector connector = getConnector(connectorName);
@@ -96,7 +115,7 @@ public class ConnectorManager {
   synchronized boolean canStartCrawl(String connectorName) {
     Connector connector = getConnector(connectorName);
     CrawlController controller = getController(connector);
-    return controller == null || controller.isQuiescent();
+    return controller == null || (controller.isQuiescent() && controller.getFetchQueue().isEmpty());
   }
 
   private CrawlController getController(Connector connector) {

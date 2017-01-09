@@ -13,6 +13,7 @@ public class CrawlController {
   private BlockingQueue<CrawlItem> fetchQueue;
   private Connector connector;
   private ForkJoinPool executorService;
+  private CrawlContext crawlContext;
   private volatile CrawlStatus status;
   int numThreads;
   private Thread watchdog;
@@ -43,8 +44,8 @@ public class CrawlController {
     startChecks();
     CrawlItem root = connector.getRootItem();
     setStatus(CrawlStatus.RUNNING);
-    CrawlContext context = new CrawlContext(limit);
-    CrawlAction rootAction = new CrawlAction(context, connector, root, fetchQueue);
+    crawlContext = new CrawlContext(limit);
+    CrawlAction rootAction = new CrawlAction(crawlContext, connector, root, fetchQueue);
     executorService.submit(rootAction);
     startWatchdogThread(rootAction, this);
     return executorService;
@@ -84,6 +85,9 @@ public class CrawlController {
     watchdog = new Thread(() -> {
       try {
         rootAction.join();
+        while (!cc.getFetchQueue().isEmpty()) {
+          Thread.sleep(1000);
+        }
         cc.setStatus(CrawlStatus.DONE);
         printSummary(rootAction.getContext());
       }
@@ -131,5 +135,13 @@ public class CrawlController {
 
   public Connector getConnector() {
     return connector;
+  }
+
+  public CrawlContext getCrawlContext() {
+    return crawlContext;
+  }
+
+  public CrawlStatus getStatus() {
+    return status;
   }
 }

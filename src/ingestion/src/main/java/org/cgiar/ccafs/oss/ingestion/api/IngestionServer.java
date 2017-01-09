@@ -1,12 +1,14 @@
 package org.cgiar.ccafs.oss.ingestion.api;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import org.apache.commons.cli.*;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.cgiar.ccafs.oss.ingestion.core.IngestionController;
 import org.cgiar.ccafs.oss.ingestion.core.IngestionException;
+
+import java.io.File;
 
 import static spark.Spark.*;
 
@@ -20,22 +22,24 @@ public class IngestionServer {
   private static JsonNodeFactory jsonNodeFactory = new JsonNodeFactory(false);
 
   public static void main(String[] args) {
+    Options options = setupOptions();
+    logger.info("Attempting to bootstrap Ingestion Server ...");
+    CommandLineParser parser = new DefaultParser();
     IngestionController controller = null;
-    if (args.length == 1) {
-      try {
-        logger.info("Attempting to bootstrap Ingestion Server ...");
-        controller = IngestionController.fromDirectory(args[0]);
+    try {
+      CommandLine commandLine = parser.parse( options, args );
+      if (commandLine.hasOption("directory")) {
+        controller = IngestionController.fromDirectory(commandLine.getOptionValue("directory"));
       }
-      catch (IngestionException e) {
-        logger.fatal(String.format("Error starting Ingestion Server: %s", e.getMessage()), e);
+      else if (commandLine.hasOption("file")) {
+        controller = IngestionController.fromFile(new File(commandLine.getOptionValue("file")));
       }
     }
-    else {
-      System.out.println("Usage: IngestionServer <configuration directory>");
-      System.exit(1);
+    catch( ParseException e ) {
+      logger.fatal( "Argument parsing failed", e);
     }
     if (controller == null) {
-      logger.fatal("Error starting Ingestion Server");
+      printHelp(options);
       System.exit(1);
     }
     final IngestionController ingestionController = controller;
@@ -47,6 +51,7 @@ public class IngestionServer {
                 return requestOK();
               }
               catch (IngestionException e) {
+                response.status(400);
                 response.type("application/json");
                 return requestError(e);
               }
@@ -59,6 +64,7 @@ public class IngestionServer {
                 return requestOK();
               }
               catch (IngestionException e) {
+                response.status(400);
                 response.type("application/json");
                 return requestError(e);
               }
@@ -71,10 +77,45 @@ public class IngestionServer {
                 return requestOK();
               }
               catch (IngestionException e) {
+                response.status(400);
                 response.type("application/json");
                 return requestError(e);
               }
             });
+    get("/connector/:connector/status",
+            (request, response) -> {
+              try {
+                ObjectNode status = ingestionController.ingestionStatus(request.params(":connector"));
+                response.type("application/json");
+                return requestOK(status);
+              }
+              catch (IngestionException e) {
+                response.status(400);
+                response.type("application/json");
+                return requestError(e);
+              }
+            });
+    get("/shutdown/now",
+            (request, response) -> {
+              logger.info("Shutting down immediately!");
+              response.type("application/json");
+              System.exit(-1);
+              return "This should not be returned";
+            });
+  }
+
+  private static void printHelp(Options options) {
+    HelpFormatter formatter = new HelpFormatter();
+    formatter.printHelp( "IngestionServer", options );
+  }
+
+  private static Options setupOptions() {
+    Option directory = Option.builder("d").longOpt("directory").hasArg().argName("directory").desc("Directory name to locate 'config.json'").build();
+    Option file = Option.builder("f").longOpt("file").hasArg().argName("file").desc("File to use for server configuration").build();
+    Options options = new Options();
+    options.addOption(directory);
+    options.addOption(file);
+    return options;
   }
 
   private static String requestError(IngestionException e) {
@@ -88,5 +129,10 @@ public class IngestionServer {
     ObjectNode ret = jsonNodeFactory.objectNode();
     ret.put("Acknowledge", "true");
     return ret.toString();
+  }
+
+  private static String requestOK(ObjectNode status) {
+    status.put("Acknowledge", "true");
+    return status.toString();
   }
 }
