@@ -35,8 +35,7 @@ if [ -z "JVM_OPTIONS" ]; then
 fi
 
 LOG4J_OPTS="-Dlog4j.configurationFile=$PROG_HOME/config/log4j2.xml"
-PROG_OPTS="$PROG_HOME/config"
 
 JAVA_OPTS="$(parse_jvm_options "$JVM_OPTIONS") $JAVA_OPTS"
 
-exec "$JAVA" $JAVA_OPTS $LOG4J_OPTS -jar ingestion-engine-${version}.jar $PROG_OPTS "$@"
+exec "$JAVA" $JAVA_OPTS $LOG4J_OPTS -jar ingestion-engine-${version}.jar "$@"
