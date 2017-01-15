@@ -10,7 +10,7 @@
             <directory>config</directory>
             <outputDirectory>/config</outputDirectory>
             <includes>
-                <include>config.json</include>
+                <include>*.json</include>
                 <include>jvm.options</include>
             </includes>
         </fileSet>
