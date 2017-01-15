@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.http.HttpHeaders;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
@@ -326,7 +327,7 @@ public class CGSpaceConnector implements Connector {
     try {
       MessageDigest md = MessageDigest.getInstance("MD5");
       md.update(str.getBytes());
-      return new String(md.digest());
+      return DigestUtils.md5Hex(md.digest());
     }
     catch (NoSuchAlgorithmException e) {
       logger.warn("Error generating MD5 hash value", e);
