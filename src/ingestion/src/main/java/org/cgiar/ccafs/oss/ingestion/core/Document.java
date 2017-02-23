@@ -9,11 +9,7 @@ import javax.jws.soap.SOAPBinding;
 import java.math.BigInteger;
 import java.util.Optional;
 
-/**
- * ===========================================================
- * Created by Eduardo Quiros-Campos - ArkiTechTura Consulting
- * ===========================================================
- **/
+
 public class Document {
   private static JsonNodeFactory jsonNodeFactory = new JsonNodeFactory(false);
   private static String SCOPES_FIELD = "scopes";

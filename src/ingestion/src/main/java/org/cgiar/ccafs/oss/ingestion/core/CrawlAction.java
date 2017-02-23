@@ -8,11 +8,6 @@ import java.util.*;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.RecursiveAction;
 
-/**
- * ===========================================================
- * Created by Eduardo Quiros-Campos - ArkiTechTura Consulting
- * ===========================================================
- **/
 public class CrawlAction extends RecursiveAction {
   private Connector connector;
   private CrawlItem item;

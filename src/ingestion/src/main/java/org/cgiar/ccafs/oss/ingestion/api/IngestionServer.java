@@ -12,11 +12,6 @@ import java.io.File;
 
 import static spark.Spark.*;
 
-/**
- * ===========================================================
- * Created by Eduardo Quiros-Campos - ArkiTechTura Consulting
- * ===========================================================
- **/
 public class IngestionServer {
   private static final Logger logger = LogManager.getLogger(IngestionServer.class);
   private static JsonNodeFactory jsonNodeFactory = new JsonNodeFactory(false);

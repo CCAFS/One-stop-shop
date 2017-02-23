@@ -1,10 +1,5 @@
 package org.cgiar.ccafs.oss.ingestion.core;
 
-/**
- * ===========================================================
- * Created by Eduardo Quiros-Campos - ArkiTechTura Consulting
- * ===========================================================
- **/
 public class IngestionException extends RuntimeException {
   public IngestionException() {
   }

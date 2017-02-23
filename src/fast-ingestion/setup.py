@@ -7,7 +7,7 @@ setup(
     install_requires=['requests'],
     url='',
     license='',
-    author='Eduardo Quiros-Campos',
+    author='QLands Technology Consultants',
     author_email='',
     description=''
 )
