@@ -1,0 +1,12 @@
+.user-box-border img {
+  border-radius: 1% !important;
+}
+
+.modal-with-percentage {
+    width: 80%;
+}
+
+.maximum_height {
+    max-height: 600px;
+    overflow-y: scroll;
+}
