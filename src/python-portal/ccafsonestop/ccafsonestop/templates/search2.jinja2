@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>CCAFS One-Stop search</title>
+
+</head>
+
+<body id="page-top" class="landing-page no-skin-config">
+<section class="container">
+    <div class="ibox float-e-margins">
+        <div class="ibox-content" style="background-color: #f4f4f4">
+            <form class="form-horizontal" method="post" action="{{ request.url }}">
+                <div class="row">
+                    <div class="col-md-10">
+                        <input class="form-control single-line-ccafs" type="text" style="margin-top: 5px" name="searchtext" value="{{ qparam }}">
+                    </div>
+                     <div class="col-md-2">
+                        <button type="submit" class="btn btn-ccafs pull-left" name="btnsearch" style="display: block; width: 100%; ">Search</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="ibox float-e-margins">
+        <div class="ibox-title" style="background-color: #f4f4f4">
+            <h2 style="color: #4f2800"><i class="fa fa-search"></i> Advanced Search</h2>
+        </div>
+        <div class="ibox-content" style="background-color: #f4f4f4">
+            <form method="post" action="{{ request.url }}" role="form" class="form-inline">
+
+                <input type="hidden" name="searchtext" value="{{ qparam }}">
+
+                {# We need to add here the already selected fields #}
+
+                {% for afield in activeFields %}
+                    <div class="row">
+                        <div class="col-md-4">
+                            <select class="select2" style="width: 100%" name="dfieldtype" value="" placeholder="Field" disabled>
+                                <option>{{ afield.name }}</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <select class="select2" style="width: 100%" name="dfieldjoin" placeholder="Connector" disabled>
+                                <option value="{{ afield.join }}">{{ afield.joindesc }}</option>
+                            </select>
+                        </div>
+                        <div class="col-md-5">
+                            <input class="form-control single-line-ccafs" style="width: 100%" name="dfieldvalue" value="{{ afield.value }}" placeholder="" disabled>
+                        </div>
+                        <div class="col-md-1">
+                            <button class="btn btn-ccafs2" name="fieldremove" value="{{ afield.code }}|{{ afield.value }}" type="submit" style="display: block; width: 100%"><i class="fa fa-remove" style="color: red"></i></button>
+                        </div>
+                    </div>
+                {% endfor %}
+
+                {#  #}
+
+                <div class="row">
+                    <div class="col-md-4">
+                        <select class="select2" style="width: 100%"  name="fieldtype" value="" placeholder="Fields">
+                            <option class="label" value="NA" disabled selected>Add Filter</option>
+                            {% for field in fields %}
+                                <option value="{{ field.name }}">{{ field.desc }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="col-md-2">
+                        <select class="select2" style="width: 100%" name="fieldjoin" placeholder="Connector">
+                            <option class="label" value="NA" disabled selected>Add Relation</option>
+                            <option value="and">Contains</option>
+                            <option value="not">Exclude</option>
+                        </select>
+                    </div>
+
+                    <div class="col-md-5">
+                        <input class="form-control single-line-ccafs" style="width: 100%" name="fieldvalue" value="" placeholder="">
+                    </div>
+                    <div class="col-md-1">
+                        <button class="btn btn-ccafs2" name="fieldadd" type="submit" style="display: block; width: 100%"><i class="fa fa-plus"></i></button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+
+    <div class="ibox float-e-margins">
+        <div class="ibox-title" style="background-color: #f4f4f4">
+            <h2 style="color: #4f2800"><i class="fa fa-filter"></i> Facet Filtering</h2>
+        </div>
+        <div class="ibox-content" style="background-color: #f4f4f4">
+            <form method="post" action="{{ request.url }}" role="form" class="form-inline">
+                <input type="hidden" name="searchtext" value="{{ qparam }}">
+                {% for afacet in activeFacets %}
+                    <div class="row">
+                        <div class="col-md-6">
+                            <select  class="select2" style="width: 100%" name="dfacettype" value="" placeholder="Facet" disabled>
+                                <option value="{{ afacet.name }}">{{ afacet.desc }}</option>
+                            </select>
+                        </div>
+                        <div class="col-md-5">
+                            <select class="select2" style="width: 100%"  name="dfacetvalue" id="dacetvalue" value="" placeholder="Facet" disabled>
+                                <option>{{ afacet.value  }}</option>
+                            </select>
+                        </div>
+                        <div class="col-md-1">
+                            <button class="btn btn-ccafs2" name="facetremove" value="{{ afacet.code }}" type="submit" style="display: block; width: 100%"><i class="fa fa-remove" style="color: red"></i></button>
+                        </div>
+                    </div>
+                {% endfor %}
+
+                <div class="row">
+                    <div class="col-md-6">
+                        <select class="select2" style="width: 100%" name="facettype" value="" placeholder="Facet" onchange="loadItems(this)">
+                            <option value="Type">Document type</option>
+                            <option value="Subject">Subject</option>
+                            <option value="Region">Region</option>
+                            <option value="Country">Country</option>
+                        </select>
+                    </div>
+                    <div class="col-md-5">
+                        <select class="select2" style="width:100%;" name="facetvalue" id="facetvalue" value="" placeholder="Facet">
+                              {% for doc in doclist %}
+                                <option>{{ doc.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-1">
+                        <button class="btn btn-ccafs2" name="facetadd" type="submit" style="display: block; width: 100%"><i class="fa fa-plus"></i></button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+    <div class="ibox float-e-margins">
+        <div class="ibox-title" style="background-color: #f4f4f4">
+            <h2><i class="fa fa-search"></i> Search Summary & results</h2>
+        </div>
+        <div class="ibox-content" style="background-color: #f4f4f4">
+            <div class="row">
+                <div class="slick_demo_2" style="margin-left: 20px; margin-right: 20px">
+                    {% if totalinqparam > 0 %}
+                        <div class="col-md-4">
+                            <div class="widget white-bg p-lg text-center">
+                                <div class="m-b-md">
+                                    Percentage of documents about<br/><b><span style="color: #ae6cb0">{{ qparam }}</span></b>
+                                    <div class="circle" id="circles-qparam"></div>
+                                </div>
+                            </div>
+                        </div>
+                    {% endif %}
+                    {% for astat in facetStats %}
+                        <div class="col-md-4">
+                            <div class="widget white-bg p-lg text-center">
+                                <div class="m-b-md">
+                                    Number of documents with <b><span style="color: #4bbac1">{{ astat.name }} <br/> = {{ astat.value }}</span></b>
+                                    <div class="circle" id="circles-{{ astat.nstat }}"></div>
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                    {% for astat in fieldStats %}
+                        <div class="col-md-4">
+                            <div class="widget white-bg p-lg text-center">
+                                <div class="m-b-md">
+                                    {% if astat.join != "not" %}
+                                        Number of documents containing <b><span style="color: #dab10d">{{ astat.value }}</span></b> in the <b><span style="color: #dab10d">{{ astat.name }}</span></b>
+                                    {% else %}
+                                        Number of documents NOT containing <b><span style="color: #dab10d">{{ astat.value }} <br/> in the  {{ astat.name }}</span></b>
+                                    {% endif %}
+                                    <div class="circle" id="fcircles-{{ astat.nstat }}"></div>
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-12">
+
+
+                    {% if hits >= 0 %}
+                        <h2 class="ccafs-element">{{ hits }} documents found</h2>
+                    {% else %}
+                        <h2 class="ccafs-element">No results found</h2>
+                    {% endif %}
+
+
+                    <div>
+                        <form method="post" action="{{ request.url }}">
+                            <input type="hidden" name="searchtext" value="{{ qparam }}">
+                            {% if qparam != "" %}
+                                <button type="submit" name="removequery" class="btn btn-w-m btn-danger">Search ["{{ qparam  }}"] <i class="fa fa-times"></i></button>
+                            {% endif %}
+                            {% for afacet in activeFacets %}
+                                <button type="submit" name="facetremove" value="{{ afacet.code }}" class="btn btn-w-m btn-danger">{{ afacet.name }} ["{{ afacet.value  }}"] <i class="fa fa-times"></i></button>
+                            {% endfor %}
+                            {% for afield in activeFields %}
+                                <button type="submit" name="fieldremove" value="{{ afield.code }}|{{ afield.value }}" class="btn btn-w-m btn-danger">{{ afield.name }} ["{{ afield.joindesc }}:{{ afield.value  }}"] <i class="fa fa-times"></i></button>
+                            {% endfor %}
+                        </form>
+                    </div>
+                </div>
+            </div>
+            <p></p>
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="ibox float-e-margins" id="posts">
+                        <input type="hidden" id="geturl" value="{{ request.host_url }}">
+                        {% for result in results %}
+                            <div class="ibox-content post" style="padding: 15px 20px 0px 20px">
+                                <article class="search-result row">
+                                    <div class="col-xs-12 col-sm-12 col-md-3">
+                                        <a class="thumbnail" style="border: hidden" onclick="showDocumentDetails('{{ result.id }}')"><img src="{{ result.thumbnail_url }}" width="94" height="125"  /></a>
+                                        <textarea style="display: none" id="{{ result.id }}">{{ result.jsonData }}</textarea>
+                                        {% if result.document_source == "CGSpace" %}
+                                            <input id="img{{ result.id }}" type="hidden" value="{{request.static_url('ccafsonestop:static/cgspace.jpg')}}">
+                                        {% else %}
+                                            <input id="img{{ result.id }}" type="hidden" value="{{request.static_url('ccafsonestop:static/dataverse.jpg')}}">
+                                        {% endif %}
+                                    </div>
+                                    <div class="col-xs-12 col-sm-12 col-md-2">
+                                        <ul class="meta-search">
+                                            <li><i class="fa fa-unlock-alt"></i> <span>Open Access</span></li>
+                                            <li><i class="fa fa-archive"></i> <span>{{ result.document_source }}</span></li>
+                                        </ul>
+                                    </div>
+                                    <div class="col-xs-12 col-sm-12 col-md-7 excerpet">
+                                        <h3 class="ccafs-element"><a title="" onclick="showDocumentDetails('{{ result.id }}')">{{ result.title[0] }}</a></h3>
+                                        {% if result.document_source == "CGSpace" %}
+                                            {% if 'production_date' in result.keys() %}
+                                                {{ result.production_date }} / {{ result.document_type }}
+                                            {% else %}
+                                                {{ result.document_type }}
+                                            {% endif %}
+                                        {% else %}
+                                            Dataset
+                                        {% endif %}
+                                        {% if 'description' in result.keys() %}
+                                            <p class="ccafs-content">{{ result.description[0]|truncate(700) }}</p>
+                                        {% else %}
+                                            <p>Without description</p>
+                                        {% endif %}
+                                    </div>
+                                </article>
+                            </div>
+                            <p></p>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            <div id="pagination">
+                {% for page in allPages %}
+                    {% if page.next == False %}
+                        <a href="{{ page.url }}">{{ page.page }}</a>
+                    {% else %}
+                        <a href="{{ page.url }}" class="next">{{ page.page }}</a>
+                    {% endif %}
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</section>
+
+<div class="modal inmodal" id="modal1" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+
+        <div class="modal-content">
+            <div class="modal-header" style="background-color: #e6e8e8">
+                <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+            </div>
+
+            <div class="modal-body" style="background-color: #e6e8e8">
+                <div id="metadetails" style="max-height: 600px; overflow-y: scroll; overflow-x: hidden;">
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div class="ibox float-e-margins">
+                                <div class="ibox-title">
+                                    <table>
+                                        <tbody>
+                                        <tr>
+                                            <td>
+                                                <i class="fa fa-file-text-o fa-3x" style="color: #4bbac1"></i>
+                                            </td>
+                                            <td>
+                                                <h2 id="doctitle" style="margin-left: 10px; color: #4f2800"></h2>
+                                            </td>
+                                        </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <div class="ibox-content" style="padding: 15px 20px 0px 20px">
+                                    <div class="row">
+                                        <div class="col-md-3">
+                                            <img id="docimage" style="width: 100%" src="http://lorempixel.com/250/140/people" alt="Lorem ipsum" />
+                                        </div>
+                                        <div class="col-md-9">
+                                            <p id="doc_description" class="ccafs-content">Lorem ipsum dolor sit amet, consectetur adipisicing elit. Voluptatem, exercitationem, suscipit, distinctio, qui sapiente aspernatur molestiae non corporis magni sit sequi iusto debitis delectus doloremque.</p>
+                                            <b class="ccafs-element">Subjects: </b>
+                                            <small id="doc_subject" class="ccafs-content">Without subjects.</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-8">
+                            <div class="ibox float-e-margins">
+                                <div class="ibox-title">
+                                    <h2 style="color: #4f2800">Metadata</h2>
+                                </div>
+                                <div class="ibox-content">
+                                    {% snippet 'snippets/details.jinja2' %}
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="ibox float-e-margins">
+                                <div class="ibox-title">
+                                    <h2 style="color: #4f2800">Source</h2>
+                                </div>
+                                <div class="ibox-content">
+                                    <img id="sourceimage" style="width: 100%" src="{{request.static_url('ccafsonestop:static/cgspace.jpg')}}" />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer" style="background-color: #e6e8e8">
+                <button type="button" class="btn btn-white" data-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+
+    function resfrehStats() {
+
+        {% if totalinqparam > 0 %}
+        Circles.create({
+            id: 'circles-qparam',
+            radius: 60,
+            value: {{ totalinqparam }},
+            maxValue: {{ grandTotal }},
+            width: 10,
+            text: function (value) {
+                return {{ ((totalinqparam*100)/grandTotal)|round }} + '%';
+            },
+            colors: ['#ae6cb0', '#f4f4f4'],
+            duration: 400,
+            wrpClass: 'circles-wrp',
+            textClass: 'circles-text',
+            styleWrapper: true,
+            styleText: true
+        });
+        {% endif %}
+
+        {% for astat in facetStats %}
+            Circles.create({
+                id: 'circles-{{ astat.nstat }}',
+                radius: 60,
+                value: {{ astat.total }},
+                maxValue: {{ grandTotal }},
+                width: 10,
+                text: function (value) {
+                    return {{ astat.total}};
+                },
+                colors: ['#4bbac1', '#f4f4f4'],
+                duration: 400,
+                wrpClass: 'circles-wrp',
+                textClass: 'circles-text',
+                styleWrapper: true,
+                styleText: true
+            });
+        {% endfor %}
+
+        {% for astat in fieldStats %}
+            Circles.create({
+                id: 'fcircles-{{ astat.nstat }}',
+                radius: 60,
+                value: {{ astat.total }},
+                maxValue: {{ grandTotal }},
+                width: 10,
+                text: function (value) {
+                    return {{ astat.total}};
+                },
+                colors: ['#dab10d', '#f4f4f4'],
+                duration: 400,
+                wrpClass: 'circles-wrp',
+                textClass: 'circles-text',
+                styleWrapper: true,
+                styleText: true
+            });
+        {% endfor %}
+
+    }
+    resfrehStats();
+
+    //$('.slick_demo_2').on('afterChange', function(event, slick, currentSlide, nextSlide){
+    //    resfrehStats();
+   // });
+
+    var ias = jQuery.ias({
+        container:  '#posts',
+        item:       '.post',
+        pagination: '#pagination',
+        next:       '.next'
+    });
+
+    ias.extension(new IASSpinnerExtension());
+
+    // Add a link after page 2 which has to be clicked to load the next page
+    //ias.extension(new IASTriggerExtension({offset: 2}));
+
+    // Add a text when there are no more pages left to load
+    ias.extension(new IASNoneLeftExtension({text: "You reached the end"}));
+
+
+</script>
+
+</body>
+
+</html>
