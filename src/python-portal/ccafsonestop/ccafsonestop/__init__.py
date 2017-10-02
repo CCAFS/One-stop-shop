@@ -18,6 +18,8 @@ def main(global_config, **settings):
     config.add_static_view('static', 'static', cache_max_age=3600)
     #config.add_route('home', '/')
     config.add_route('search', '/')
+    config.add_route('get', '/get/{type}')
+
 
     templatesPath = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'templates')
 

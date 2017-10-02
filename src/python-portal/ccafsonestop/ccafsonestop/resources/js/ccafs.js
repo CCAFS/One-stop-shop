@@ -1,38 +1,61 @@
+function loadItems(list) {
+    var hostURL = $('#geturl').val()
+    $("#facetvalue").empty();
+    $.getJSON(hostURL + "/get/"+list.value, function( data ) {
+        data.forEach(function(entry) {
+            //var opt = document.createElement('option');
+            //opt.value = entry.name;
+            //opt.text = entry.name;
+            //tlist.options.add(opt);
+            $('#facetvalue')
+         .append($("<option></option>")
+                    .attr("value",entry.name)
+                    .text(entry.name));
 
-/*
-    This function show the details of a document in the modal window
- */
-
-function hex2a(hexx) {
-    var hex = hexx.toString();//force conversion
-    var str = '';
-    for (var i = 0; i < hex.length; i += 2)
-        str += String.fromCharCode(parseInt(hex.substr(i, 2), 16));
-    return str;
+        });
+    });
 }
 
+function getOptionByValue (select, value) {
+    var options = select.options;
+    for (var i = 0; i < options.length; i++) {
+        if (options[i].value === value) {
+            return options[i]
+        }
+    }
+    return null
+}
 
 function showDocumentDetails(hexdata)
 {
-    var data = hex2a(hexdata);
-    //alert(decodeURIComponent((data)));
 
-    //alert(data);
+    var myDiv = document.getElementById('metadetails');
+
+    var imageURL = $('#img'+hexdata).val()
+    document.getElementById("sourceimage").src=imageURL;
+
+    var data = $('#'+hexdata).val()
+    //alert(decodeURIComponent((data)));
     var obj = jQuery.parseJSON(data);
     jQuery("#docimage").attr('src',obj.thumbnail_url);
 
-    if (obj.hasOwnProperty('title'))
-        $("#doctitle").text(obj.title);
+    if (obj.hasOwnProperty('title')) {
+        $("#doctitle").text(" "+ obj.title);
+        $("#doctitle2").text(obj.title);
+    }
     else
+    {
         $("#doctitle").text("Without title");
+        $("#doctitle2").text("Without title");
+    }
 
     if (obj.hasOwnProperty('url')) {
-        $("#doc_url").text(obj.url);
+        $("#doc_url2").text(obj.url);
         $("#doc_url2").attr('href', obj.url);
         $("#doc_url2").attr('target', "_blank");
     }
     else {
-        $("#doc_url").text("Without url");
+        $("#doc_url2").text("Without url");
         $("#doc_url2").attr('href', "");
         $("#doc_url2").attr('target', "");
     }
@@ -142,7 +165,45 @@ function showDocumentDetails(hexdata)
     else
         $("#doc_contact").text("Without contact information.");
 
-
-    $('#large').modal('show');
-    setTimeout( function() {$("#cgcore").scrollTop(0)}, 200 );
+    $('#modal1').modal('show');
+    myDiv.scrollTop = 0;
 }
+
+$(document).ready(function(){
+
+    $(".select2").select2();
+
+    $('.slick_demo_2').slick({
+        infinite: false,
+        slidesToShow: 3,
+        slidesToScroll: 1,
+        centerMode: false,
+        dots: true,
+        responsive: [
+            {
+                breakpoint: 1024,
+                settings: {
+                    slidesToShow: 3,
+                    slidesToScroll: 3,
+                    infinite: true,
+                    dots: true
+                }
+            },
+            {
+                breakpoint: 600,
+                settings: {
+                    slidesToShow: 2,
+                    slidesToScroll: 2
+                }
+            },
+            {
+                breakpoint: 480,
+                settings: {
+                    slidesToShow: 1,
+                    slidesToScroll: 1
+                }
+            }
+        ]
+    });
+
+});

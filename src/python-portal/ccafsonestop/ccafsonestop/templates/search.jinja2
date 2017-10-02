@@ -2,7 +2,7 @@
 <!--[if IE 8]> <html lang="en" class="ie8 no-js"> <![endif]-->
 <!--[if IE 9]> <html lang="en" class="ie9 no-js"> <![endif]-->
 <!--[if !IE]><!-->
-<html lang="en">
+<html lang="en" xmlns="http://www.w3.org/1999/html">
 <!--<![endif]-->
 <!-- BEGIN HEAD -->
 
@@ -44,26 +44,25 @@
             <div class="search-page search-content-1">
                 <div class="search-bar ">
                     <div class="row">
-                        <div class="col-md-7">
-                            <div class="input-group">
-                                <form method="post" action="{{ request.path }}">
-                                    <div class="form-body">
-                                        <div class="form-group">
-                                            <label>Search for items</label>
-                                            <div class="input-group input-group-lg">
-                                                <input type="hidden" name="activefacets" value="{{ fparam }}">
-                                                <input type="text" class="form-control" name="searchtext" value="{{ qparam }}" placeholder="Search for...">
+                        <div class="col-md-12">
+
+                            <form method="post" action="{{ request.path }}" class="form-horizontal">
+                                <div class="form-body">
+                                    <div class="form-group form-md-line-input">
+                                        <div class="col-md-11">
+                                            <input type="hidden" name="activefacets" value="{{ fparam }}">
+                                            <input type="text" class="form-control" name="searchtext" value="{{ qparam }}" placeholder="Search for...">
+
+                                        </div>
+                                        <div class="col-md-1">
                                                 <span class="input-group-btn">
                                                     <button class="btn blue" name="btnsearch" type="submit">Go!</button>
                                                 </span>
-                                            </div>
                                         </div>
                                     </div>
-                                </form>
-                            </div>
-                        </div>
-                        <div class="col-md-5">
-                            <p class="search-desc clearfix"> This is a temporary search for CCAFS's One-Stop shop</p>
+                                </div>
+                            </form>
+
                         </div>
                     </div>
                     <div class="row">
@@ -72,11 +71,13 @@
                                 <input type="hidden" name="activefacets" value="{{ fparam }}">
                                 <input type="hidden" name="searchtext" value="{{ qparam }}">
 
+                                {#
                                 {% for afacet in facetArray %}
                                 <button type="submit" name="remove" value="{{ afacet }}" class="btn red btn-sm" style="width: auto">
                                     {{ afacet }} <i class="fa fa-remove"></i>
                                 </button>
                                 {% endfor %}
+                            #}
 
 
                             </form>
@@ -84,42 +85,124 @@
                     </div>
                 </div>
                 <div class="row">
-                    <div class="col-md-7">
+                    <div class="col-md-12">
                         <div class="search-container ">
-                            <ul>
-
-                                <li class="search-item-header">
-                                    <div class="row">
-                                        <div class="col-sm-9 col-xs-8">
-                                            {% if filtered == False %}
-                                                <h3>Showing the latest 7 documents</h3>
-                                            {% else %}
-                                                <h3>Showing 7 documents of {{ hits }}</h3>
-                                            {% endif %}
+                            <h2><span class="fa fa-search"></span> Advanced search</h2>
+                            <div class="row">
+                                <form method="post" action="{{ request.path }}" class="form-horizontal">
+                                    <input type="hidden" name="activefacets" value="{{ fparam }}">
+                                    <input type="hidden" name="searchtext" value="{{ qparam }}">
+                                    <div class="form-body">
+                                        {% for afacet in facetArray2 %}
+                                            <div class="form-group form-md-line-input">
+                                                <div class="col-md-6">
+                                                    <select class="form-control" name="dfacettype" value="" placeholder="Facet" disabled>
+                                                        <option>{{ afacet.name }}</option>
+                                                    </select>
+                                                </div>
+                                                <div class="col-md-5">
+                                                    <select class="form-control" name="dfacetvalue" id="dacetvalue" value="" placeholder="Facet" disabled>
+                                                        <option>{{ afacet.value  }}</option>
+                                                    </select>
+                                                </div>
+                                                <div class="col-md-1">
+                                                    <button class="btn red" name="remove" value="{{ afacet.internal }}" type="submit">
+                                                        <i class="fa fa-remove"></i>
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        {% endfor %}
+                                        <div class="form-group form-md-line-input">
+                                            <div class="col-md-6">
+                                                <select class="form-control" name="facettype" value="" placeholder="Facet" onchange="loadItems(this)">
+                                                    <option>Documents</option>
+                                                    <option>Subjects</option>
+                                                    <option>Regions</option>
+                                                    <option>Countries</option>
+                                                </select>
+                                            </div>
+                                            <div class="col-md-5">
+                                                <select class="form-control" name="facetvalue" id="facetvalue" value="" placeholder="Facet">
+                                                    {% for doc in doclist %}
+                                                        <option>{{ doc.name }}</option>
+                                                    {% endfor %}
+                                                </select>
+                                            </div>
+                                            <div class="col-md-1">
+                                                <button class="btn blue" name="facetadd" type="submit">
+                                                    <i class="fa fa-plus"></i>
+                                                </button>
+                                            </div>
                                         </div>
                                     </div>
-                                    <hr>
-                                </li>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
 
-                                {% for result in results %}
+                {% if filtered == True %}
+                    <div class="row">
+                        <div class="portlet-body">
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <div class="easy-pie-chart">
+                                        <div class="number transactions" data-percent="{{ perhits }}">
+                                            <span>{{ perhits }}</span>% </div>
+                                        Percentage of documents about {{ qparam }}
 
-                                    <li class="search-item clearfix">
-                                        <a onclick="showDocumentDetails('{{ result.jsonData }}')">
-                                            <img src="{{ result.thumbnail_url }}" />
-                                        </a>
-                                        <div class="search-content">
-                                            <h2 class="search-title">
-                                                <a onclick="showDocumentDetails('{{ result.jsonData }}')">{{ result.title[0] }}</a>
-                                            </h2>
-                                            {% if 'description' in result.keys() %}
-                                                <p class="search-desc"> {{ result.description[0] }} </p>
-                                            {% else %}
-                                                <p class="search-desc"> Without description </p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                {% endif %}
+
+                <div class="row">
+                    <div class="col-md-12">
+                        <div class="search-container ">
+
+
+                            <li class="search-item-header">
+                                <div class="row">
+                                    <div class="col-sm-9 col-xs-8">
+                                        {% if filtered == False %}
+                                            <h3>Showing the latest 7 documents</h3>
+                                        {% else %}
+                                            {% if hits > 7 %}
+                                                <h3>Showing 7 documents of {{ hits }}</h3>
                                             {% endif %}
-                                        </div>
-                                    </li>
-                                {% endfor %}
-                            </ul>
+                                            {% if hits <= 7 and hits > 0 %}
+                                                <h3>Showing {{ hits }} documents</h3>
+                                            {% endif %}
+                                            {% if hits == 0 %}
+                                                <h3>No results found</h3>
+                                            {% endif %}
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                <hr>
+                            </li>
+
+                            {% for result in results %}
+
+                                <li class="search-item clearfix">
+                                    <a onclick="showDocumentDetails('{{ result.jsonData }}')">
+                                        <img src="{{ result.thumbnail_url }}" />
+                                    </a>
+                                    <div class="search-content">
+                                        <h2 class="search-title">
+                                            <a onclick="showDocumentDetails('{{ result.jsonData }}')">{{ result.title[0] }}</a>
+                                        </h2>
+                                        {% if 'description' in result.keys() %}
+                                            <p class="search-desc"> {{ result.description[0] }} </p>
+                                        {% else %}
+                                            <p class="search-desc"> Without description </p>
+                                        {% endif %}
+                                    </div>
+                                </li>
+                            {% endfor %}
+
                             <div class="search-pagination">
                                 {% if filtered == True %}
                                     <ul class="pagination">
@@ -131,81 +214,7 @@
                             </div>
                         </div>
                     </div>
-                    <div class="col-md-5">
-                        <!-- BEGIN PORTLET-->
-                        <div class="portlet light ">
-                            <div class="portlet-title">
-                                <div class="caption">
-                                    <i class="icon-edit font-dark"></i>
-                                    <span class="caption-subject font-dark bold uppercase">Facets</span>
-                                </div>
 
-                            </div>
-                            <div class="portlet-body">
-                                <div class="note note-success">
-                                    <h4 class="block">Document types</h4>
-                                    <p>
-                                    <form method="post" action="{{ request.path }}">
-                                        <input type="hidden" name="searchtext" value="{{ qparam }}">
-                                        <input type="hidden" name="activefacets" value="{{ fparam }}">
-                                        {% for item in documents%}
-                                            <button type="submit" name="fdocuments" value="{{ item.name }}" class="btn blue btn-circle">{{ item.name }} ({{ item.nitems }})</button>
-                                        {% endfor %}
-                                    </form>
-
-                                    </p>
-                                </div>
-                            </div>
-
-                            <div class="portlet-body">
-                                <div class="note note-success">
-                                    <h4 class="block">Subjects</h4>
-                                    <p>
-                                    <form method="post" action="{{ request.path }}">
-                                        <input type="hidden" name="searchtext" value="{{ qparam }}">
-                                        <input type="hidden" name="activefacets" value="{{ fparam }}">
-                                        {% for item in subjects%}
-                                            <button type="submit" name="fsubjects" value="{{ item.name }}" class="btn blue btn-circle">{{ item.name }} ({{ item.nitems }})</button>
-                                        {% endfor %}
-                                    </form>
-                                    </p>
-                                </div>
-                            </div>
-
-                            <div class="portlet-body">
-                                <div class="note note-success">
-                                    <h4 class="block">Regions</h4>
-                                    <p>
-                                    <form method="post" action="{{ request.path }}">
-                                        <input type="hidden" name="searchtext" value="{{ qparam }}">
-                                        <input type="hidden" name="activefacets" value="{{ fparam }}">
-                                        {% for item in regions%}
-                                            <button type="submit" name="fregions" value="{{ item.name }}" class="btn blue btn-circle">{{ item.name }} ({{ item.nitems }})</button>
-                                        {% endfor %}
-                                    </form>
-                                    </p>
-                                </div>
-                            </div>
-
-                            <div class="portlet-body">
-                                <div class="note note-success">
-                                    <h4 class="block">Countries</h4>
-                                    <p>
-                                    <form method="post" action="{{ request.path }}">
-                                        <input type="hidden" name="searchtext" value="{{ qparam }}">
-                                        <input type="hidden" name="activefacets" value="{{ fparam }}">
-                                        {% for item in countries%}
-                                            <button type="submit" name="fcountries" value="{{ item.name }}" class="btn blue btn-circle">{{ item.name }} ({{ item.nitems }})</button>
-                                        {% endfor %}
-                                    </form>
-                                    </p>
-                                </div>
-                            </div>
-
-
-                        </div>
-                        <!-- END PORTLET-->
-                    </div>
                 </div>
             </div>
         </div>
